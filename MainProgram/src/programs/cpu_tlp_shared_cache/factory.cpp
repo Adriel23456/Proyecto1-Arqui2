@@ -5,3 +5,4 @@
 std::unique_ptr<State> CreateCpuTLPSharedCacheState(StateManager* sm, sf::RenderWindow* win) {
     return std::make_unique<CpuTLPSharedCacheState>(sm, win);
 }
+

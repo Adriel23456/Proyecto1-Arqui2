@@ -35,3 +35,4 @@ void StateManager::applyNextState() {
 State* StateManager::getCurrentState() const {
     return m_currentState.get();
 }
+

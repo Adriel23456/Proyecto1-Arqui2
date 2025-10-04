@@ -20,14 +20,19 @@ private:
     enum class Panel {
         Compiler = 0,
         GeneralView,
+        PE0CPU,
         PE0Mem,
+        PE1CPU,
         PE1Mem,
+        PE2CPU,
         PE2Mem,
+        PE3CPU,
         PE3Mem,
-        RAM
+        RAM,
+        AnalysisData
     };
 
-    static constexpr size_t kPanelCount = 7;
+    static constexpr size_t kPanelCount = 12;
     static constexpr size_t panelIndex(Panel p) { return static_cast<size_t>(p); }
 
     Panel m_selected = Panel::Compiler;

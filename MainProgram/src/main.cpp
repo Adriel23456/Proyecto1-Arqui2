@@ -16,7 +16,7 @@ static void recreateWindow(sf::RenderWindow& window, ConfigManager& cfg) {
     ImGui::SFML::Shutdown();
 
     sf::VideoMode vm(cfg.getResolutionWidth(), cfg.getResolutionHeight());
-    window.create(vm, "Motor de diseño y programacion gráfica", cfg.getWindowStyle());
+    window.create(vm, "Programs of Computer Engineering", cfg.getWindowStyle());
     window.setFramerateLimit(cfg.getFramerate());
     window.setVerticalSyncEnabled(cfg.isVSyncEnabled());
 
@@ -38,7 +38,7 @@ int main() {
     }
 
     sf::VideoMode videoMode(config.getResolutionWidth(), config.getResolutionHeight());
-    sf::RenderWindow window(videoMode, "Motor de diseño y programacion gráfica", config.getWindowStyle());
+    sf::RenderWindow window(videoMode, "Programs of Computer Engineering", config.getWindowStyle());
     window.setFramerateLimit(config.getFramerate());
     window.setVerticalSyncEnabled(config.isVSyncEnabled());
 
@@ -57,8 +57,8 @@ int main() {
     audio.playBGM(true);
 
     // ==== NUEVO: cargar efectos de abrir/cerrar el SettingsOverlay ====
-    audio.loadSFX("enterSettings", "SoundEffect/Settings.wav");
-    audio.loadSFX("exitSettings", "SoundEffect/Settings.wav");
+    audio.loadSFX("enterSettings", "SoundEffects/Settings.wav");
+    audio.loadSFX("exitSettings", "SoundEffects/Settings.wav");
 	// ==================================================================
     StateManager stateManager;
     stateManager.setCurrentState(std::make_unique<MainMenuState>(&stateManager, &window));

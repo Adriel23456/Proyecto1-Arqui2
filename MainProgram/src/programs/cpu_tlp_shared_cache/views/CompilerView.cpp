@@ -4,6 +4,26 @@
 
 CompilerView::CompilerView() {
     m_source.reserve(16 * 1024);
+
+    // Texto de ejemplo por defecto (solo la primera vez)
+    if (m_source.empty()) {
+        static const char* kDefaultSource =
+            "#Simple example of summing from 1 to 10000:\n"
+            "MOVI REG1, #1\n"
+            "MOVI REG2, #0\n"
+            ".Loop:\n"
+            "\tADD REG2, REG2, REG1\n"
+            "\tADDI REG1, REG1, #1\n"
+            "\tCMPI REG1, #10001\n"
+            "\tBLT .Loop\n"
+            "SWI\n";
+
+        m_source.assign(kDefaultSource);
+
+        // Mantener buena capacidad para edición fluida
+        if (m_source.capacity() - m_source.size() < 1024)
+            m_source.reserve(m_source.size() + 4096);
+    }
 }
 
 int CompilerView::TextEditCallback(ImGuiInputTextCallbackData* data) {

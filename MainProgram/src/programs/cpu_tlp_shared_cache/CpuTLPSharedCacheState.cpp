@@ -1,29 +1,59 @@
 ﻿#include "programs/cpu_tlp_shared_cache/CpuTLPSharedCacheState.h"
+
 #include "programs/cpu_tlp_shared_cache/views/ICpuTLPView.h"
 #include "programs/cpu_tlp_shared_cache/views/CompilerView.h"
 #include "programs/cpu_tlp_shared_cache/views/GeneralView.h"
+
+// NUEVAS vistas de CPU por PE
+#include "programs/cpu_tlp_shared_cache/views/PE0CPUView.h"
+#include "programs/cpu_tlp_shared_cache/views/PE1CPUView.h"
+#include "programs/cpu_tlp_shared_cache/views/PE2CPUView.h"
+#include "programs/cpu_tlp_shared_cache/views/PE3CPUView.h"
+
+// Vistas de memoria por PE
 #include "programs/cpu_tlp_shared_cache/views/PE0MemView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE1MemView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE2MemView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE3MemView.h"
+
+// RAM / Caché compartida
 #include "programs/cpu_tlp_shared_cache/views/RAMView.h"
+#include "programs/cpu_tlp_shared_cache/views/AnalysisDataView.h"
 
 #include "imgui.h"
 #include <algorithm> // std::clamp
 
 CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindow* win)
     : State(sm, win) {
-    buildAllViews(); // <- Instanciamos todas las sub-vistas una sola vez
+    buildAllViews(); // Instanciamos todas las sub-vistas una sola vez
 }
 
 void CpuTLPSharedCacheState::buildAllViews() {
+    // Orden EXACTO solicitado:
+    // Compiler, General View,
+    // PE0 CPU, PE0 Mem,
+    // PE1 CPU, PE1 Mem,
+    // PE2 CPU, PE2 Mem,
+    // PE3 CPU, PE3 Mem,
+	// RAM, Analysis Data
     m_views[panelIndex(Panel::Compiler)] = std::make_unique<CompilerView>();
     m_views[panelIndex(Panel::GeneralView)] = std::make_unique<GeneralView>();
+
+    m_views[panelIndex(Panel::PE0CPU)] = std::make_unique<PE0CPUView>();
     m_views[panelIndex(Panel::PE0Mem)] = std::make_unique<PE0MemView>();
+
+    m_views[panelIndex(Panel::PE1CPU)] = std::make_unique<PE1CPUView>();
     m_views[panelIndex(Panel::PE1Mem)] = std::make_unique<PE1MemView>();
+
+    m_views[panelIndex(Panel::PE2CPU)] = std::make_unique<PE2CPUView>();
     m_views[panelIndex(Panel::PE2Mem)] = std::make_unique<PE2MemView>();
+
+    m_views[panelIndex(Panel::PE3CPU)] = std::make_unique<PE3CPUView>();
     m_views[panelIndex(Panel::PE3Mem)] = std::make_unique<PE3MemView>();
+
     m_views[panelIndex(Panel::RAM)] = std::make_unique<RAMView>();
+
+    m_views[panelIndex(Panel::AnalysisData)] = std::make_unique<AnalysisDataView>();
 }
 
 ICpuTLPView* CpuTLPSharedCacheState::getView(Panel p) {
@@ -31,9 +61,8 @@ ICpuTLPView* CpuTLPSharedCacheState::getView(Panel p) {
 }
 
 void CpuTLPSharedCacheState::handleEvent(sf::Event& e) {
-    // Por defecto, solo la vista visible recibe eventos de entrada.
-    // Si quieres que TODAS reciban eventos, cambia este bloque por un loop
-    // sobre m_views y llama v->handleEvent(e) para cada una.
+    // Solo la vista visible recibe eventos de entrada.
+    // (Si quieres que TODAS reciban eventos, iterar m_views y enviar a cada una.)
     if (auto* v = getView(m_selected)) v->handleEvent(e);
 }
 
@@ -87,18 +116,17 @@ void CpuTLPSharedCacheState::render() {
 
         // Usar el content region disponible (evita overflow por paddings)
         ImVec2 avail = ImGui::GetContentRegionAvail();
-        const float leftW = avail.x * 0.20f;   // 20%
-        const float SEP = 4.0f;              // separación visual entre paneles
-        const float rightW = avail.x - leftW - SEP; // 80% ajustado al espacio real
-        const float contentH = avail.y;        // alto disponible sin forzar scroll
+        const float leftW = avail.x * 0.20f;         // 20%
+        const float SEP = 4.0f;                    // separación visual entre paneles
+        const float rightW = avail.x - leftW - SEP;   // 80% ajustado al espacio real
+        const float contentH = avail.y;                 // alto disponible
 
         // === Columna Izquierda (con scroll vertical) ===
         ImGui::BeginChild("##LeftSidebar", ImVec2(leftW, contentH), true,
             ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
-        const float TOP_PAD = 14.0f;           // padding superior extra
+        const float TOP_PAD = 14.0f;    // padding superior extra
         const float BTN_H = 56.0f;
-        // ancho de botón según el ancho real del child (evita restas mágicas)
         float btnW = ImGui::GetContentRegionAvail().x;
 
         ImGui::Dummy(ImVec2(1, TOP_PAD));
@@ -108,19 +136,30 @@ void CpuTLPSharedCacheState::render() {
         if (sidebarButton("General View", (m_selected == Panel::GeneralView), btnW, BTN_H)) m_selected = Panel::GeneralView;
         ImGui::Dummy(ImVec2(1, 10));
 
+        if (sidebarButton("PE0 CPU", (m_selected == Panel::PE0CPU), btnW, BTN_H)) m_selected = Panel::PE0CPU;
+        ImGui::Dummy(ImVec2(1, 10));
         if (sidebarButton("PE0 Mem", (m_selected == Panel::PE0Mem), btnW, BTN_H)) m_selected = Panel::PE0Mem;
         ImGui::Dummy(ImVec2(1, 10));
 
+        if (sidebarButton("PE1 CPU", (m_selected == Panel::PE1CPU), btnW, BTN_H)) m_selected = Panel::PE1CPU;
+        ImGui::Dummy(ImVec2(1, 10));
         if (sidebarButton("PE1 Mem", (m_selected == Panel::PE1Mem), btnW, BTN_H)) m_selected = Panel::PE1Mem;
         ImGui::Dummy(ImVec2(1, 10));
 
+        if (sidebarButton("PE2 CPU", (m_selected == Panel::PE2CPU), btnW, BTN_H)) m_selected = Panel::PE2CPU;
+        ImGui::Dummy(ImVec2(1, 10));
         if (sidebarButton("PE2 Mem", (m_selected == Panel::PE2Mem), btnW, BTN_H)) m_selected = Panel::PE2Mem;
         ImGui::Dummy(ImVec2(1, 10));
 
+        if (sidebarButton("PE3 CPU", (m_selected == Panel::PE3CPU), btnW, BTN_H)) m_selected = Panel::PE3CPU;
+        ImGui::Dummy(ImVec2(1, 10));
         if (sidebarButton("PE3 Mem", (m_selected == Panel::PE3Mem), btnW, BTN_H)) m_selected = Panel::PE3Mem;
         ImGui::Dummy(ImVec2(1, 10));
 
         if (sidebarButton("RAM", (m_selected == Panel::RAM), btnW, BTN_H)) m_selected = Panel::RAM;
+        ImGui::Dummy(ImVec2(1, 10));
+
+        if (sidebarButton("Analysis Data", (m_selected == Panel::AnalysisData), btnW, BTN_H)) m_selected = Panel::AnalysisData;
 
         ImGui::EndChild();
 

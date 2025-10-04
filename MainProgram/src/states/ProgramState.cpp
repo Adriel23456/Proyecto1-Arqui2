@@ -20,3 +20,4 @@ void ProgramState::renderBackground() {
     // Solo un fondo sólido para ProgramState cuando el overlay está abierto
     m_window->clear(sf::Color(30, 30, 30));
 }
+
