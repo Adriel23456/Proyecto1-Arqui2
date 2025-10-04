@@ -1,0 +1,18 @@
+# Directorios de compilación
+out/
+build/
+.vs/
+*.user
+*.suo
+
+# Archivos temporales
+*.tmp
+*.log
+
+# IMPORTANTE: NO ignorar las librerías de third-party
+!MainProgram/thirdparty/
+!MainProgram/thirdparty/**
+!MainProgram/thirdparty/**/*.lib
+!MainProgram/thirdparty/**/*.dll
+!MainProgram/thirdparty/**/*.a
+!MainProgram/thirdparty/**/*.so

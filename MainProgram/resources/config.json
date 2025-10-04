@@ -1,0 +1,9 @@
+{
+  "resolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "framerate": 60,
+  "vsync": true,
+  "screenMode": "windowed"
+}
