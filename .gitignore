@@ -1,46 +1,81 @@
-# Visual Studio
+# =========================
+# Visual Studio / VSCode
+# =========================
 .vs/
-*.VC.db
-*.ipch
+.vscode/
 *.suo
 *.user
-*.db
-*.obj
-*.pch
-*.pdb
-*.log
-*.cache
+*.userosscache
+*.sln.docstates
 
-# Compiled binaries
-bin/
-obj/
-Debug/
-Release/
-*.exe
-*.dll
-*.pdb
-*.cache
+# =========================
+# Build results
+# =========================
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Bb]uild/
+[Ll]og/
+*.log
+
+# =========================
+# VC++ intermediates / caches pesadas
+# =========================
 *.ipch
-*.db
-*.opendb
-*.VC.db
-*.log
-
-# Others
+ipch/
+*.iobj
+*.ipdb
+*.pdb
+*.obj
 *.tlog
 *.lastbuildstate
 *.idb
 *.ilk
-*.aps
-*.ncb
+*.pch
+*.cache
+
+# Bases de datos de VS (MUY pesadas)
+*.VC.db
+*.VC.opendb
 *.sdf
 *.opensdf
-*.VC.opendb
 
-# IMPORTANTE: NO ignorar las librerías de third-party
-!MainProgram/thirdparty/
+# Otros
+*.db
+*.opendb
+*.aps
+*.ncb
+*.tld
+
+# =========================
+# NuGet (opcional)
+# =========================
+packages/
+!packages/build/
+*.nupkg
+
+# =========================
+# BINARIOS GENERALES
+# =========================
+*.exe
+*.dll
+*.lib
+*.so
+*.a
+
+# =========================
+# EXCEPCIÓN: mantener third-party (plug & play)
+# =========================
+# Re-incluir TODO dentro de MainProgram/thirdparty
 !MainProgram/thirdparty/**
-!MainProgram/thirdparty/**/*.lib
+# y re-incluir los binarios necesarios ahí dentro
 !MainProgram/thirdparty/**/*.dll
-!MainProgram/thirdparty/**/*.a
+!MainProgram/thirdparty/**/*.lib
 !MainProgram/thirdparty/**/*.so
+!MainProgram/thirdparty/**/*.a
+!MainProgram/thirdparty/**/*.pdb
