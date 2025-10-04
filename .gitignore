@@ -36,3 +36,11 @@ Release/
 *.sdf
 *.opensdf
 *.VC.opendb
+
+# IMPORTANTE: NO ignorar las librerías de third-party
+!MainProgram/thirdparty/
+!MainProgram/thirdparty/**
+!MainProgram/thirdparty/**/*.lib
+!MainProgram/thirdparty/**/*.dll
+!MainProgram/thirdparty/**/*.a
+!MainProgram/thirdparty/**/*.so
