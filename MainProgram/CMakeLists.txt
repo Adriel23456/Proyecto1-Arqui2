@@ -46,7 +46,7 @@ add_subdirectory(thirdparty/nlohmann)
 file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 
-add_executable("${CMAKE_PROJECT_NAME}" ${MY_SOURCES})
+add_executable("${CMAKE_PROJECT_NAME}" ${MY_SOURCES} "include/programs/cpu_tlp_shared_cache/views/ICpuTLPView.h" "include/programs/cpu_tlp_shared_cache/views/CompilerView.h" "src/programs/cpu_tlp_shared_cache/views/CompilerView.cpp" "include/programs/cpu_tlp_shared_cache/views/GeneralView.h" "src/programs/cpu_tlp_shared_cache/views/GeneralView.cpp" "include/programs/cpu_tlp_shared_cache/views/PE0MemView.h" "src/programs/cpu_tlp_shared_cache/views/PE0MemView.cpp" "include/programs/cpu_tlp_shared_cache/views/PE1MemView.h" "src/programs/cpu_tlp_shared_cache/views/PE1MemView.cpp" "include/programs/cpu_tlp_shared_cache/views/PE2MemView.h" "src/programs/cpu_tlp_shared_cache/views/PE2MemView.cpp" "include/programs/cpu_tlp_shared_cache/views/PE3MemView.h" "src/programs/cpu_tlp_shared_cache/views/PE3MemView.cpp" "include/programs/cpu_tlp_shared_cache/views/RAMView.h" "src/programs/cpu_tlp_shared_cache/views/RAMView.cpp" "include/programs/cpu_tlp_shared_cache/CpuTLPSharedCacheState.h" "src/programs/cpu_tlp_shared_cache/CpuTLPSharedCacheState.cpp" "src/programs/cpu_tlp_shared_cache/factory.cpp")
 
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
 

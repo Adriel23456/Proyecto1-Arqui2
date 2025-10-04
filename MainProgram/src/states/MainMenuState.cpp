@@ -5,12 +5,15 @@
 #include <memory>
 #include <string>
 
+// Forward factory para evitar include cruzado pesado
+std::unique_ptr<State> CreateCpuTLPSharedCacheState(StateManager*, sf::RenderWindow*);
+
 MainMenuState::MainMenuState(StateManager* stateManager, sf::RenderWindow* window)
     : State(stateManager, window)
 {
     m_items = {
-        "CPU TLP con Cache Compartida",
-        "CPU Tomasulo",
+        "CPU TLP with Shared Cache",
+        "CPU with Tomasulo",
         "Quicksort",
     };
 }
@@ -109,7 +112,15 @@ void MainMenuState::render() {
 
         for (const auto& it : m_items) {
             if (buttonAutoFitText(it.c_str(), btnWidth, btnHeight)) {
-                m_stateManager->queueNextState(std::make_unique<ProgramState>(m_stateManager, m_window, it));
+                if (it == "CPU TLP with Shared Cache") {
+                    // Nuevo programa especializado
+                    extern std::unique_ptr<State> CreateCpuTLPSharedCacheState(StateManager*, sf::RenderWindow*);
+                    m_stateManager->queueNextState(CreateCpuTLPSharedCacheState(m_stateManager, m_window));
+                }
+                else {
+                    // Resto sigue usando el stub ProgramState
+                    m_stateManager->queueNextState(std::make_unique<ProgramState>(m_stateManager, m_window, it));
+                }
             }
             ImGui::Dummy(ImVec2(1, 8));
         }
