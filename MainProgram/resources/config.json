@@ -1,9 +1,13 @@
 {
-  "resolution": {
-    "width": 1920,
-    "height": 1080
-  },
-  "framerate": 60,
-  "vsync": true,
-  "screenMode": "windowed"
+    "audio": {
+        "bgm": 5,
+        "sfx": 25
+    },
+    "framerate": 60,
+    "resolution": {
+        "height": 900,
+        "width": 1600
+    },
+    "screenMode": "window",
+    "vsync": true
 }

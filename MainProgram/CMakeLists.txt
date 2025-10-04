@@ -17,7 +17,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Release>:Release>")
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) #link time optimization
-
+set(CMAKE_POSITION_INDEPENDENT_CODE ON) #faster code
 # Ensure SFML is built as static libraries
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build SFML as static libraries" FORCE)
 
@@ -46,7 +46,7 @@ add_subdirectory(thirdparty/nlohmann)
 file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 
-add_executable("${CMAKE_PROJECT_NAME}")
+add_executable("${CMAKE_PROJECT_NAME}" ${MY_SOURCES})
 
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
 
@@ -66,9 +66,9 @@ else()
 endif()
 
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${MY_SOURCES} 
-	"src/ConfigManager.cpp" "src/CreditsState.cpp" "src/main.cpp" "src/MainMenuState.cpp" "src/MultiplayerState.cpp" "src/OptionsState.cpp" "src/SinglePlayerState.cpp" "src/State.cpp" "src/StateManager.cpp"
-	"include/ConfigManager.h" "include/CreditsState.h" "include/MainMenuState.h" "include/MultiplayerState.h" "include/OptionsState.h" "include/SinglePlayerState.h" "include/State.h" "include/StateManager.h"
-)
+	"src/systems/ConfigManager.cpp"  "src/main.cpp" "src/states/MainMenuState.cpp"    "src/core/State.cpp" "src/core/StateManager.cpp"
+	"include/systems/ConfigManager.h"  "include/states/MainMenuState.h"    "include/core/State.h" "include/core/StateManager.h"
+  "include/systems/AudioManager.h" "include/ui/SettingsOverlay.h" "include/states/ProgramState.h"  "src/systems/AudioManager.cpp" "src/ui/SettingsOverlay.cpp" "src/states/ProgramState.cpp")
 
 if(MSVC) # If using the VS compiler...
 
@@ -80,7 +80,14 @@ if(MSVC) # If using the VS compiler...
 
 endif()
 
-target_include_directories("${CMAKE_PROJECT_NAME}" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
+target_include_directories("${CMAKE_PROJECT_NAME}" PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/core"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/systems"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/states"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/ui"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/util"
+)
 
 # Link SFML libraries statically, Here wou would add other libraries!
 target_link_libraries("${CMAKE_PROJECT_NAME}" 

@@ -4,28 +4,44 @@
 #include "imgui-SFML.h"
 #include "imguiThemes.h"
 
-#include "StateManager.h"
-#include "MainMenuState.h"
-#include "ConfigManager.h"
-
+#include "core/StateManager.h"
+#include "states/MainMenuState.h"
+#include "systems/ConfigManager.h"
+#include "ui/SettingsOverlay.h"
+#include "systems/AudioManager.h"
 
 #define CONFIG_PATH RESOURCES_PATH "config.json"
 
+static void recreateWindow(sf::RenderWindow& window, ConfigManager& cfg) {
+    ImGui::SFML::Shutdown();
+
+    sf::VideoMode vm(cfg.getResolutionWidth(), cfg.getResolutionHeight());
+    window.create(vm, "Motor de diseño y programacion gráfica", cfg.getWindowStyle());
+    window.setFramerateLimit(cfg.getFramerate());
+    window.setVerticalSyncEnabled(cfg.isVSyncEnabled());
+
+    ImGui::SFML::Init(window);
+    ImGui::StyleColorsDark();
+    imguiThemes::embraceTheDarkness();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.FontGlobalScale = 2.0f;
+    ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.0f;
+}
+
 int main() {
-    // 1. Cargar la configuración gráfica desde el JSON
     ConfigManager config;
     if (!config.load(CONFIG_PATH)) {
-        std::cout << "No se pudo cargar el archivo de configuración, se usarán valores por defecto." << std::endl;
+        std::cout << "No se pudo cargar config.json, se usan valores por defecto.\n";
         config.setDefault();
+        config.save(CONFIG_PATH);
     }
 
-    // 2. Crear la ventana con la configuración cargada
     sf::VideoMode videoMode(config.getResolutionWidth(), config.getResolutionHeight());
     sf::RenderWindow window(videoMode, "Motor de diseño y programacion gráfica", config.getWindowStyle());
     window.setFramerateLimit(config.getFramerate());
     window.setVerticalSyncEnabled(config.isVSyncEnabled());
 
-    // Inicializar ImGui con SFML
     ImGui::SFML::Init(window);
     ImGui::StyleColorsDark();
     imguiThemes::embraceTheDarkness();
@@ -34,25 +50,27 @@ int main() {
     io.FontGlobalScale = 2.0f;
     ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 1.0f;
 
-    // --- EJEMPLO de cómo cargar un sprite (ahora comentado) ---
-    /*
-    sf::Texture t;
-    // Recuerda: si quieres cargar algo, SIEMPRE se usa RESOURCES_PATH
-    if (!t.loadFromFile(RESOURCES_PATH "snake.png")) {
-        std::cout << "Error al cargar la textura snake.png" << std::endl;
-    }
-    sf::Sprite s(t);
-    */
+    AudioManager audio;
+    audio.setBGMVolume(config.getBGMVolume() / 100.f);
+    audio.setSFXVolume(config.getSFXVolume() / 100.f);
+    audio.init("Music/Mainmenu.mp3");
+    audio.playBGM(true);
 
-    // 3. Crear el StateManager y establecer el menú principal
+    // ==== NUEVO: cargar efectos de abrir/cerrar el SettingsOverlay ====
+    audio.loadSFX("enterSettings", "SoundEffect/Settings.wav");
+    audio.loadSFX("exitSettings", "SoundEffect/Settings.wav");
+	// ==================================================================
     StateManager stateManager;
     stateManager.setCurrentState(std::make_unique<MainMenuState>(&stateManager, &window));
+
+    SettingsOverlay overlay(&window, &config, &audio);
 
     sf::Clock clock;
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             ImGui::SFML::ProcessEvent(window, event);
+
             if (event.type == sf::Event::Closed) {
                 window.close();
             }
@@ -60,39 +78,47 @@ int main() {
                 sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
                 window.setView(sf::View(visibleArea));
             }
-            if (stateManager.getCurrentState())
-                stateManager.getCurrentState()->handleEvent(event);
+            else if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
+                overlay.toggle();
+            }
+
+            if (!overlay.isOpen() && !io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+                if (stateManager.getCurrentState())
+                    stateManager.getCurrentState()->handleEvent(event);
+            }
         }
 
-        sf::Time deltaTime = clock.restart();
-        float deltaTimeSeconds = deltaTime.asSeconds();
-        deltaTimeSeconds = std::min(deltaTimeSeconds, 1.f);
-        deltaTimeSeconds = std::max(deltaTimeSeconds, 0.f);
-        ImGui::SFML::Update(window, deltaTime);
+        sf::Time dt = clock.restart();
+        float dtSec = std::min(1.f, std::max(0.f, dt.asSeconds()));
+        ImGui::SFML::Update(window, dt);
 
-        if (stateManager.getCurrentState())
-            stateManager.getCurrentState()->update(deltaTimeSeconds);
+        if (!overlay.isOpen() && stateManager.getCurrentState()) {
+            stateManager.getCurrentState()->update(dtSec);
+        }
+
+        overlay.update(dtSec);
 
         window.clear();
-        if (stateManager.getCurrentState())
+
+        if (!overlay.isOpen() && stateManager.getCurrentState()) {
             stateManager.getCurrentState()->render();
+        }
+        else if (overlay.isOpen() && stateManager.getCurrentState()) {
+            stateManager.getCurrentState()->renderBackground();
+        }
+
+        overlay.render();
 
         ImGui::SFML::Render(window);
         window.display();
 
+        if (overlay.consumeApplyRequested()) {
+            recreateWindow(window, config);
+            overlay.rebuildAfterRecreate();
+        }
+
         if (stateManager.hasNextState())
             stateManager.applyNextState();
-
-        // Opcional: Si se detecta que se han aplicado cambios en la configuración (desde OptionsState)
-        // se puede recargar el archivo y actualizar la ventana sin interrumpir el programa.
-        // Ejemplo (pseudocódigo):
-        // if (configChanged) {
-        //     config.load(CONFIG_PATH);
-        //     window.create(sf::VideoMode(config.getResolutionWidth(), config.getResolutionHeight()),
-        //                   "Programas con diferentes motores gráficos!", config.getWindowStyle());
-        //     window.setFramerateLimit(config.getFramerate());
-        //     window.setVerticalSyncEnabled(config.isVSyncEnabled());
-        // }
     }
 
     ImGui::SFML::Shutdown();

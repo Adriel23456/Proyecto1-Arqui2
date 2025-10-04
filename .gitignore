@@ -1,18 +1,38 @@
-# Directorios de compilación
-out/
-build/
+# Visual Studio
 .vs/
-*.user
+*.VC.db
+*.ipch
 *.suo
+*.user
+*.db
+*.obj
+*.pch
+*.pdb
+*.log
+*.cache
 
-# Archivos temporales
-*.tmp
+# Compiled binaries
+bin/
+obj/
+Debug/
+Release/
+*.exe
+*.dll
+*.pdb
+*.cache
+*.ipch
+*.db
+*.opendb
+*.VC.db
 *.log
 
-# IMPORTANTE: NO ignorar las librerías de third-party
-!MainProgram/thirdparty/
-!MainProgram/thirdparty/**
-!MainProgram/thirdparty/**/*.lib
-!MainProgram/thirdparty/**/*.dll
-!MainProgram/thirdparty/**/*.a
-!MainProgram/thirdparty/**/*.so
+# Others
+*.tlog
+*.lastbuildstate
+*.idb
+*.ilk
+*.aps
+*.ncb
+*.sdf
+*.opensdf
+*.VC.opendb
