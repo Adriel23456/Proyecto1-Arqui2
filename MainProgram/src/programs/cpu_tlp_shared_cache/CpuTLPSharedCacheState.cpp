@@ -22,10 +22,26 @@
 
 #include "imgui.h"
 #include <algorithm> // std::clamp
+#include <iostream>  // para std::cerr
 
 CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindow* win)
     : State(sm, win) {
     buildAllViews(); // Instanciamos todas las sub-vistas una sola vez
+
+    // Inicializar el componente de Instruction Memory
+    m_instructionMemoryData = std::make_shared<cpu_tlp::InstructionMemorySharedData>();
+    m_instructionMemory = std::make_unique<cpu_tlp::InstructionMemoryComponent>();
+
+    if (!m_instructionMemory->initialize(m_instructionMemoryData)) {
+        std::cerr << "[CpuTLPSharedCacheState] Failed to initialize Instruction Memory component!" << std::endl;
+    }
+}
+
+CpuTLPSharedCacheState::~CpuTLPSharedCacheState() {
+    // Asegurar que los componentes asíncronos se detengan correctamente
+    if (m_instructionMemory) {
+        m_instructionMemory->shutdown();
+    }
 }
 
 void CpuTLPSharedCacheState::buildAllViews() {
@@ -35,7 +51,29 @@ void CpuTLPSharedCacheState::buildAllViews() {
     // PE1 CPU, PE1 Mem,
     // PE2 CPU, PE2 Mem,
     // PE3 CPU, PE3 Mem,
-	// RAM, Analysis Data
+    // RAM, Analysis Data
+
+    // Crear el CompilerView
+    auto compilerView = std::make_unique<CompilerView>();
+
+    // Configurar el callback de compilación
+    compilerView->setCompileCallback([this](const std::string& sourceCode) {
+        std::cout << "[CpuTLPSharedCacheState] Compilation callback triggered" << std::endl;
+
+        // Recargar el componente de Instruction Memory con el nuevo archivo
+        if (m_instructionMemory) {
+            bool reloadSuccess = m_instructionMemory->reloadInstructionMemory();
+            if (reloadSuccess) {
+                std::cout << "[CpuTLPSharedCacheState] Instruction memory reloaded successfully" << std::endl;
+            }
+            else {
+                std::cerr << "[CpuTLPSharedCacheState] Failed to reload instruction memory" << std::endl;
+            }
+        }
+        });
+
+    m_views[panelIndex(Panel::Compiler)] = std::move(compilerView);
+
     m_views[panelIndex(Panel::Compiler)] = std::make_unique<CompilerView>();
     m_views[panelIndex(Panel::GeneralView)] = std::make_unique<GeneralView>();
 

@@ -9,12 +9,15 @@
   },
   "ExpandedNodes": [
     "",
-    "\\include",
-    "\\Local settings (.vs)",
+    "\\include\\programs\\cpu_tlp_shared_cache",
+    "\\include\\programs\\cpu_tlp_shared_cache\\views",
     "\\out\\build",
-    "\\src",
-    "\\thirdparty"
+    "\\resources\\Assets",
+    "\\resources\\Assets\\CPU_TLP",
+    "\\src\\programs",
+    "\\src\\programs\\cpu_tlp_shared_cache",
+    "\\src\\programs\\cpu_tlp_shared_cache\\components",
+    "\\src\\programs\\cpu_tlp_shared_cache\\views"
   ],
-  "SelectedNode": "\\out",
   "PreviewInSolutionExplorer": false
 }
