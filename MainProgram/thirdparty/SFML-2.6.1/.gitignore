@@ -38,3 +38,12 @@ build/
 .cache/
 .vscode/
 .idea/
+
+# Anular ignores del vendor dentro de SFML para tener plug & play
+!extlibs/**
+!include/**
+!lib/**
+!bin/**
+!lib/cmake/**
+!share/**
+!cmake/**

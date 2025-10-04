@@ -1,0 +1,20 @@
+{
+  "OutputFoldersPerTargetSystem": {
+    "Local Machine": [
+      "out\\build\\x64-Debug",
+      "out\\install\\x64-Debug",
+      "out\\build\\x64-Release-no debug info",
+      "out\\install\\x64-Release-no debug info"
+    ]
+  },
+  "ExpandedNodes": [
+    "",
+    "\\include",
+    "\\Local settings (.vs)",
+    "\\out\\build",
+    "\\src",
+    "\\thirdparty"
+  ],
+  "SelectedNode": "\\out",
+  "PreviewInSolutionExplorer": false
+}

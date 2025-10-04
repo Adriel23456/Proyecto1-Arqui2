@@ -1,7 +1,16 @@
 # =========================
 # Visual Studio / VSCode
 # =========================
-.vs/
+# Ignora TODO dentro de .vs ... 
+.vs/**
+# ...pero permite que Git vea los directorios e incluya unos JSON clave
+!.vs/
+!.vs/**/
+!.vs/**/launch.vs.json
+!.vs/**/ProjectSettings.json
+!.vs/**/VSWorkspaceState.json
+# (todo lo demás en .vs sigue ignorado por la primera regla)
+
 .vscode/
 *.suo
 *.user
@@ -9,22 +18,29 @@
 *.sln.docstates
 
 # =========================
-# Build results
+# Build dirs (solo en la raíz)
 # =========================
-[Bb]in/
-[Oo]bj/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
-[Bb]uild/
-[Ll]og/
-*.log
+/[Bb]in/
+/[Oo]bj/
+/[Dd]ebug/
+/[Rr]elease/
+/x64/
+/x86/
+/[Aa][Rr][Mm]/
+/[Aa][Rr]64/
+/[Bb]uild/
+/out/
+/dist/
+
+# CMake (árboles de build)
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/Makefile
+**/compile_commands.json
 
 # =========================
-# VC++ intermediates / caches pesadas
+# VC++ intermediates / caches
 # =========================
 *.ipch
 ipch/
@@ -39,7 +55,7 @@ ipch/
 *.pch
 *.cache
 
-# Bases de datos de VS (MUY pesadas)
+# Bases de datos de VS
 *.VC.db
 *.VC.opendb
 *.sdf
@@ -51,31 +67,29 @@ ipch/
 *.aps
 *.ncb
 *.tld
+*.log
 
 # =========================
-# NuGet (opcional)
-# =========================
-packages/
-!packages/build/
-*.nupkg
-
-# =========================
-# BINARIOS GENERALES
+# Binarios (por defecto ignorados)
 # =========================
 *.exe
 *.dll
 *.lib
 *.so
 *.a
+*.dylib
+*.pdb
+
+# =========================
+# NuGet (opcional)
+# =========================
+/packages/
+!packages/build/
+*.nupkg
 
 # =========================
 # EXCEPCIÓN: mantener third-party (plug & play)
 # =========================
-# Re-incluir TODO dentro de MainProgram/thirdparty
+# Re-incluir TODO bajo MainProgram/thirdparty (pisando ignores anteriores)
+!MainProgram/thirdparty/
 !MainProgram/thirdparty/**
-# y re-incluir los binarios necesarios ahí dentro
-!MainProgram/thirdparty/**/*.dll
-!MainProgram/thirdparty/**/*.lib
-!MainProgram/thirdparty/**/*.so
-!MainProgram/thirdparty/**/*.a
-!MainProgram/thirdparty/**/*.pdb
