@@ -19,6 +19,6 @@
     "\\src\\programs\\cpu_tlp_shared_cache\\views",
     "\\src\\programs\\cpu_tlp_shared_cache\\widgets"
   ],
-  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\widgets\\RegTable.cpp",
+  "SelectedNode": "\\CMakeLists.txt",
   "PreviewInSolutionExplorer": false
 }
