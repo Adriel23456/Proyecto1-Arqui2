@@ -10,6 +10,7 @@ class ICpuTLPView;
 // Includes para los componentes asíncronos
 #include "programs/cpu_tlp_shared_cache/components/InstructionMemoryComponent.h"
 #include "programs/cpu_tlp_shared_cache/components/SharedData.h"
+#include "programs/cpu_tlp_shared_cache/components/PE0Component.h"
 
 class CpuTLPSharedCacheState : public State {
 public:
@@ -21,23 +22,38 @@ public:
     void render() override;
     void renderBackground() override;
 
+    void resetPE0();
+    void stepPE0();
+    void stepUntilPE0(int steps);
+    void stepIndefinitelyPE0();
+    void stopPE0();
+
 private:
     enum class Panel {
         Compiler = 0,
         GeneralView,
+
         PE0CPU,
+        PE0Reg,   // <<< NUEVO
         PE0Mem,
+
         PE1CPU,
+        PE1Reg,   // <<< NUEVO
         PE1Mem,
+
         PE2CPU,
+        PE2Reg,   // <<< NUEVO
         PE2Mem,
+
         PE3CPU,
+        PE3Reg,   // <<< NUEVO
         PE3Mem,
+
         RAM,
         AnalysisData
     };
 
-    static constexpr size_t kPanelCount = 12;
+    static constexpr size_t kPanelCount = 16;
     static constexpr size_t panelIndex(Panel p) { return static_cast<size_t>(p); }
 
     Panel m_selected = Panel::Compiler;
@@ -53,4 +69,7 @@ private:
     bool sidebarButton(const char* label, bool selected, float width, float height);
     void buildAllViews();
     ICpuTLPView* getView(Panel p);
+
+    std::unique_ptr<cpu_tlp::PE0Component> m_pe0;
+    std::shared_ptr<cpu_tlp::CPUSystemSharedData> m_cpuSystemData;
 };

@@ -1,0 +1,17 @@
+#pragma once
+#include "programs/cpu_tlp_shared_cache/views/ICpuTLPView.h"
+#include "programs/cpu_tlp_shared_cache/widgets/RegTable.h"
+#include <cstdint>
+#include <string>
+
+class PE3RegView : public ICpuTLPView {
+public:
+    PE3RegView() : m_table(3) {}
+    void render() override { m_table.render("##PE3_RegTable"); }
+
+    void setRegValueByIndex(int idx, uint64_t v) { m_table.setValueByIndex(idx, v); }
+    void setRegValueByName(const std::string& name, uint64_t v) { m_table.setValueByName(name, v); }
+
+private:
+    RegTable m_table;
+};
