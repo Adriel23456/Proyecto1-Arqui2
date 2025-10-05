@@ -9,12 +9,16 @@
   },
   "ExpandedNodes": [
     "",
+    "\\include",
     "\\include\\programs",
     "\\include\\programs\\cpu_tlp_shared_cache",
-    "\\out\\build",
-    "\\resources\\Assets",
-    "\\resources\\Assets\\CPU_TLP"
+    "\\include\\programs\\cpu_tlp_shared_cache\\views",
+    "\\src",
+    "\\src\\programs",
+    "\\src\\programs\\cpu_tlp_shared_cache",
+    "\\src\\programs\\cpu_tlp_shared_cache\\views",
+    "\\src\\programs\\cpu_tlp_shared_cache\\widgets"
   ],
-  "SelectedNode": "\\CMakeLists.txt",
+  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\widgets\\RegTable.cpp",
   "PreviewInSolutionExplorer": false
 }
