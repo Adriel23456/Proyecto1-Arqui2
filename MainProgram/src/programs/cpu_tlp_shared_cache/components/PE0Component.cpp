@@ -10,6 +10,9 @@
 #include <cstring>
 #include <algorithm>
 
+static constexpr uint8_t REG_ZERO = 0;
+static constexpr uint8_t REG_PEID = 9;
+
 namespace cpu_tlp {
 
     // ============================================================================
@@ -76,11 +79,15 @@ namespace cpu_tlp {
 
     void PE0Component::RegisterFile::write(uint8_t addr, uint64_t value, bool we) {
         if (!we) return;
-        if (addr == 0) return; // REG0 inmutable
         if (addr >= 12) return;
+
+        // Bloquear SIEMPRE los intentos de escritura a R0 y PEID
+        if (addr == REG_ZERO || addr == REG_PEID) {
+            return;
+        }
+
         regs[addr] = value;
 
-        // NUEVO: Notificar al snapshot (se configurará desde fuera)
         if (onRegisterWrite) {
             onRegisterWrite(addr, value);
         }
@@ -171,12 +178,40 @@ namespace cpu_tlp {
         break;
 
         // Operaciones de punto flotante
-        case 0x0E: // FADD
-            res.value = doubleToBits(bitsToDouble(A) + bitsToDouble(B));
+        case 0x0E: { // FADD
+            double da = bitsToDouble(A);
+            double db = bitsToDouble(B);
+            double r = da + db;
+            res.value = doubleToBits(r);
+            // Flags FP para "suma" (usados cuando FlagsUpd_D=1, p.ej. FCMN/FCMNI)
+            if (std::isnan(da) || std::isnan(db) || std::isnan(r)) {
+                res.flags = 0x1; // V=1 => unordered
+            }
+            else {
+                bool N = (r < 0.0);
+                bool Z = (r == 0.0);
+                // No hay carry en FP; lo dejamos en 0
+                res.flags = (N ? 0x8 : 0) | (Z ? 0x4 : 0);
+            }
             break;
-        case 0x0F: // FSUB
-            res.value = doubleToBits(bitsToDouble(A) - bitsToDouble(B));
+        }
+        case 0x0F: { // FSUB
+            double da = bitsToDouble(A);
+            double db = bitsToDouble(B);
+            double r = da - db;
+            res.value = doubleToBits(r);
+            // Flags FP estilo "compare": N/Z del resultado, C = (da >= db), V=unordered
+            if (std::isnan(da) || std::isnan(db) || std::isnan(r)) {
+                res.flags = 0x1; // V=1
+            }
+            else {
+                bool N = (r < 0.0);
+                bool Z = (r == 0.0);
+                bool C = (da >= db);
+                res.flags = (N ? 0x8 : 0) | (Z ? 0x4 : 0) | (C ? 0x2 : 0);
+            }
             break;
+        }
         case 0x10: // FMUL
             res.value = doubleToBits(bitsToDouble(A) * bitsToDouble(B));
             break;
@@ -235,21 +270,25 @@ namespace cpu_tlp {
         case 0x1F: // FMVNI
             res.value = ~B;
             break;
-        case 0x20: // FCMPS
-        {
+        case 0x20: { // FCMPS
             double da = bitsToDouble(A);
             double db = bitsToDouble(B);
+
+            // Unordered si CUALQUIER operando es NaN
             if (std::isnan(da) || std::isnan(db)) {
-                res.flags = 0x1; // V=1 (unordered)
+                res.flags = 0x1;      // V=1, N=Z=C=0
+                res.value = 0;
+                break;
             }
-            else {
-                double diff = da - db;
-                bool N = diff < 0;
-                bool Z = diff == 0;
-                bool C = da >= db;
-                res.flags = (N ? 0x8 : 0) | (Z ? 0x4 : 0) | (C ? 0x2 : 0);
-            }
+
+            // Comparación directa (evita problemas como +inf vs +inf, -0.0 vs +0.0, etc.)
+            bool Z = (da == db);      // true para +inf==+inf y -0.0==+0.0
+            bool N = (da < db);      // "negativo" si Rn < Rm
+            bool C = (da >= db);      // "carry/borrow" estilo ARM: Rn >= Rm
+
+            res.flags = (N ? 0x8 : 0) | (Z ? 0x4 : 0) | (C ? 0x2 : 0);
             res.value = 0;
+            break;
         }
         break;
         case 0x21: // CRASH
@@ -268,8 +307,8 @@ namespace cpu_tlp {
     }
 
     // ============================================================================
-// CONTROLUNIT
-// ============================================================================
+    // CONTROLUNIT
+    // ============================================================================
 
     PE0Component::ControlUnit::Signals PE0Component::ControlUnit::decode(uint8_t opcode) {
         Signals sig;
@@ -298,13 +337,28 @@ namespace cpu_tlp {
             sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 0;
             break;
 
-            // 0x1C-0x1D: MOV especiales
-        case 0x1C: case 0x1D:
+            // 0x1C: INC Rd  (Rd <- Rd + 1)
+        // 0x1D: DEC Rd  (Rd <- Rd - 1)
+        case 0x1C: { // INC
             sig.RegWrite_D = 1; sig.MemOp_D = 0; sig.C_WE_D = 0;
             sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
-            sig.FlagsUpd_D = 1; sig.ALUControl_D = opcode;
-            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 0;
+            sig.FlagsUpd_D = 1;
+            sig.ALUControl_D = 0x00;  // ADD
+            sig.BranchOp_D = 0; sig.BranchE = 0;
+            sig.ImmOp = 1;            // usa imm=1 (aunque no lo mostremos en el disassembler)
+            sig.DataType = 0;
             break;
+        }
+        case 0x1D: { // DEC
+            sig.RegWrite_D = 1; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1;
+            sig.ALUControl_D = 0x01;  // SUB
+            sig.BranchOp_D = 0; sig.BranchE = 0;
+            sig.ImmOp = 1;            // usa imm=1
+            sig.DataType = 0;
+            break;
+        }
 
             // 0x1E-0x27: Operaciones floating point SIN inmediato
         case 0x1E: // FADD Rd, Rn, Rm
@@ -475,14 +529,54 @@ namespace cpu_tlp {
             sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 0;
             break;
 
-            // 0x3F-0x44: Comparaciones floating point
-        case 0x3F: case 0x40: case 0x41: case 0x42: case 0x43: case 0x44:
+            // 0x3F-0x44: Comparaciones floating point (sin escritura a Rd)
+        // FCMP  -> usa FSUB (flags de r = Rn - Rm)
+        // FCMN  -> usa FADD (flags de r = Rn + Rm)
+        // FCMPS -> usa comparador dedicado (tu ALU 0x20)
+        // ... y sus variantes con inmediato (imm float)
+
+        case 0x3F: { // FCMP Rn, Rm  (flags de Rn - Rm)
             sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
             sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
-            sig.FlagsUpd_D = 1; sig.ALUControl_D = opcode - 0x3F + 0x1E;
-            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = (opcode >= 0x42 ? 1 : 0);
-            sig.DataType = (opcode >= 0x42 ? 1 : 0);
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x0F; // FSUB
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
             break;
+        }
+        case 0x40: { // FCMN Rn, Rm  (flags de Rn + Rm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x0E; // FADD
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+        }
+        case 0x41: { // FCMPS Rn, Rm  (comparador dedicado)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x20; // FCMPS (tu caso 0x20)
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+        }
+        case 0x42: { // FCMPI Rn, #immf  (flags de Rn - imm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x0F; // FSUB
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 1; // imm float->double
+            break;
+        }
+        case 0x43: { // FCMNI Rn, #immf (flags de Rn + imm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x0E; // FADD
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 1;
+            break;
+        }
+        case 0x44: { // FCMPSI Rn, #immf (comparador dedicado con imm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x20; // FCMPS
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 1;
+            break;
+        }
 
             // 0x45-0x4B: Branches
         case 0x45: case 0x46: case 0x47: case 0x48:
@@ -595,8 +689,9 @@ namespace cpu_tlp {
 
         // 2. InstructionLatency
         if (!INS_READY) {
-            out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
-            log_line("  [HazardUnit] !INS_READY -> Full stall\n");
+            out.StallF = true;
+            out.StallD = true;
+            log_line("  [HazardUnit] !INS_READY -> StallF, StallD\n");
             return out;
         }
 
@@ -765,8 +860,8 @@ namespace cpu_tlp {
     }
 
     // ============================================================================
-// CONSTRUCTOR / DESTRUCTOR / LIFECYCLE
-// ============================================================================
+    // CONSTRUCTOR / DESTRUCTOR / LIFECYCLE
+    // ============================================================================
 
     PE0Component::PE0Component(int pe_id)
         : m_pe_id(pe_id)
@@ -1123,19 +1218,23 @@ namespace cpu_tlp {
     void PE0Component::stageFetch() {
         auto& instConn = m_sharedData->instruction_connections[m_pe_id];
 
-        // Leer señales
         bool ins_ready = instConn.INS_READY.load(std::memory_order_acquire);
         uint64_t instr = instConn.InstrF.load(std::memory_order_acquire);
 
-        // PRINT DIAGNÓSTICO (atómico)
         log_build_and_print([&](std::ostringstream& oss) {
             oss << "  [stageFetch] PC=" << std::hex << PC_F
                 << " INS_READY=" << std::dec << (int)ins_ready
                 << " Instr=0x" << std::hex << instr << std::dec << "\n";
             });
 
-        IF_ID_next.Instr_F = instr;
-        IF_ID_next.PC_F = PC_F;
+        if (ins_ready) {
+            IF_ID_next.Instr_F = instr;
+            IF_ID_next.PC_F = PC_F;
+        }
+        else {
+            // Hold: no “ensucies” el front con una instrucción aún no válida
+            IF_ID_next = IF_ID;   // conserva lo que hay
+        }
     }
 
     // ============================================================================
@@ -1156,6 +1255,36 @@ namespace cpu_tlp {
 
         // Control Unit
         ctrlSignals = m_controlUnit.decode(Op_in);
+
+        // --- INC/DEC: son unarias y leen el mismo Rd ---
+        // Asegura que la HazardUnit vea dependencia RAW contra Rd
+        if (Op_in == 0x1C || Op_in == 0x1D) {
+            Rn_in = Rd_in_D;   // fuente
+            Rm_in = Rd_in_D;   // también como Rm para ser conservadores
+        }
+
+        // --- SWI: si llega a Decode, detener ejecución (incluye STEP infinito) ---
+        if (Op_in == 0x4C) {
+            auto& ctrl = m_sharedData->pe_control[m_pe_id];
+            const int currentCmd = ctrl.command.load(std::memory_order_acquire);
+            const bool wasInfinite = (currentCmd == 3);
+
+            // Señalizar STOP inmediato
+            ctrl.should_stop.store(true, std::memory_order_release);
+            ctrl.command.store(0, std::memory_order_release);   // regresar a idle
+            ctrl.running.store(false, std::memory_order_release);
+
+            // *** NUEVO: notificar al hilo principal que muestre popup ***
+            m_sharedData->ui_signals[m_pe_id].swi_count.fetch_add(1, std::memory_order_acq_rel);
+
+            // Mensajes para consola + log
+            log_build_and_print([&](std::ostringstream& oss) {
+                oss << "[PE" << m_pe_id << "] SWI reached Decode -> STOP"
+                    << (wasInfinite ? " (infinite STEP disabled)" : "")
+                    << " | PC=0x" << std::hex << PC_in << std::dec << "\n";
+                });
+            std::cout << "[PE" << m_pe_id << "] Se aplicó un SWI -> STOP\n";
+        }
 
         // Register File (lectura)
         RD_Rn_out = m_registerFile.read(Rn_in);
@@ -1192,8 +1321,10 @@ namespace cpu_tlp {
         bool c_ready = cacheConn.C_READY.load(std::memory_order_acquire);
 
         m_hazards = m_hazardUnit.detect(
-            ins_ready, c_request, c_ready, SegmentationFault, PCSrc_AND,
-            MEM_WB.PCSrc_M,  // ← NUEVO: PCSrc_W
+            ins_ready, c_request, c_ready,
+            /*SegmentationFault*/ m_segmentationFault,  // <-- usar el sticky
+            PCSrc_AND,
+            MEM_WB.PCSrc_M,
             Rd_in_D, Rn_in, Rm_in,
             ID_EX.Rd_in_D, EX_MEM.Rd_in_E, MEM_WB.Rd_in_M,
             ID_EX.RegWrite_D, EX_MEM.RegWrite_E, MEM_WB.RegWrite_M,
@@ -1214,7 +1345,9 @@ namespace cpu_tlp {
             });
 
         // Preparar next flipflop
-        ID_EX_next.RegWrite_D = ctrlSignals.RegWrite_D;
+        uint8_t rd = Rd_in_D;
+        bool regWriteAllowed = ctrlSignals.RegWrite_D && (rd != REG_ZERO) && (rd != REG_PEID);
+        ID_EX_next.RegWrite_D = regWriteAllowed;
         ID_EX_next.MemOp_D = ctrlSignals.MemOp_D;
         ID_EX_next.C_WE_D = ctrlSignals.C_WE_D;
         ID_EX_next.C_REQUEST_D = ctrlSignals.C_REQUEST_D;
@@ -1227,7 +1360,7 @@ namespace cpu_tlp {
         ID_EX_next.SrcA_D = SrcA_D;
         ID_EX_next.SrcB_D = SrcB_D;
         ID_EX_next.RD_Rm_out = RD_Rm_out;
-        ID_EX_next.Rd_in_D = Rd_in_D;
+        ID_EX_next.Rd_in_D = rd;
 
         ID_EX_next.Instr_D = InstrD;  // << ESTA ES LA INSTRUCCIÓN EN DECODE
     }

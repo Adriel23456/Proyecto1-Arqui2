@@ -191,7 +191,7 @@ namespace cpu_tlp {
                 processPERequest(i);
             }
 
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
+            std::this_thread::sleep_for(std::chrono::microseconds(10));
         }
 
         std::cout << "[InstructionMemory] Thread ending" << std::endl;

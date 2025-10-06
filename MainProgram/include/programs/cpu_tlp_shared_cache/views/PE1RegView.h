@@ -5,6 +5,7 @@
 #include <string>
 
 class CpuTLPControlAPI;
+class CpuTLPSharedCacheState; // <<<< AGREGAR ESTA DECLARACION FORWARD
 
 class PE1RegView : public ICpuTLPView {
 public:
@@ -13,6 +14,8 @@ public:
 
 private:
     friend class CpuTLPControlAPI;
+    friend class CpuTLPSharedCacheState; // <<<< AGREGAR ESTA LINEA
+
     void setRegValueByIndex_(int idx, uint64_t v) { m_table.setValueByIndex_(idx, v); }
     void setRegValueByName_(const std::string& name, uint64_t v) { m_table.setValueByName_(name, v); }
     void setPEID_(int peIndex) { m_table.setPEID_(peIndex); }

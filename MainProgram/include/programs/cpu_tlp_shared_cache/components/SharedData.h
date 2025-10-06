@@ -63,6 +63,10 @@ namespace cpu_tlp {
         std::atomic<bool> component_ready{ false };
     };
 
+    struct UIEventSignals {
+        std::atomic<uint32_t> swi_count{ 0 }; // contador de eventos SWI por PE
+    };
+
     // AHORA sí puede usar PEInstructionTracking porque ya está definido
     struct CPUSystemSharedData {
         std::array<PEInstructionConnection, 4> instruction_connections;
@@ -71,9 +75,10 @@ namespace cpu_tlp {
 
         // Snapshots de registros para cada PE (solo lectura desde UI)
         std::array<PERegisterSnapshot, 4> pe_registers;
+        std::array<PEInstructionTracking, 4>   pe_instruction_tracking;
 
-        // Tracking de instrucciones para cada PE
-        std::array<PEInstructionTracking, 4> pe_instruction_tracking;
+        std::array<UIEventSignals, 4>          ui_signals;
+
 
         std::atomic<bool> system_should_stop{ false };
     };

@@ -224,9 +224,14 @@ namespace cpu_tlp {
             break;
 
             // Rd, #imm (MOV variants - entero)
-        case 0x1C: case 0x1D: case 0x33: case 0x34:
+        case 0x33: case 0x34:
             result << " " << getRegisterName(rd) << ", "
                 << formatImmediate(imm, false);
+            break;
+
+        case 0x1C: // INC
+        case 0x1D: // DEC
+            result << " " << getRegisterName(rd);
             break;
 
             // Rd, #imm (MOV variants - float)

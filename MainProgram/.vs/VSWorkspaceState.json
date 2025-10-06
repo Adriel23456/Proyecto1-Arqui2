@@ -9,15 +9,7 @@
   },
   "ExpandedNodes": [
     "",
-    "\\out",
-    "\\out\\build",
-    "\\resources\\Assets",
-    "\\resources\\Assets\\CPU_TLP",
-    "\\src\\programs",
-    "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components",
-    "\\src\\programs\\cpu_tlp_shared_cache\\widgets"
+    "\\out\\build"
   ],
-  "SelectedNode": "\\out\\build",
   "PreviewInSolutionExplorer": false
 }

@@ -98,7 +98,7 @@ add_executable("${CMAKE_PROJECT_NAME}" ${MY_SOURCES}
 "include/programs/cpu_tlp_shared_cache/components/PE0Component.h"
 "src/programs/cpu_tlp_shared_cache/components/PE0Component.cpp"
 "include/programs/cpu_tlp_shared_cache/CpuTLPControlAPI.h"
- "include/programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h" "src/programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.cpp" "include/programs/cpu_tlp_shared_cache/widgets/Log.h")
+ "include/programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h" "src/programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.cpp" "include/programs/cpu_tlp_shared_cache/widgets/Log.h" "include/programs/cpu_tlp_shared_cache/components/PE1Component.h" "src/programs/cpu_tlp_shared_cache/components/PE1Component.cpp" "src/programs/cpu_tlp_shared_cache/components/PE2Component.cpp" "src/programs/cpu_tlp_shared_cache/components/PE3Component.cpp" "include/programs/cpu_tlp_shared_cache/components/PE2Component.h" "include/programs/cpu_tlp_shared_cache/components/PE3Component.h")
 
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
 
