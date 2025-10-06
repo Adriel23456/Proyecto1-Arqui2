@@ -3,7 +3,6 @@
 #include "imgui.h"
 #include "imgui-SFML.h"
 #include "imguiThemes.h"
-
 #include "core/StateManager.h"
 #include "states/MainMenuState.h"
 #include "systems/ConfigManager.h"

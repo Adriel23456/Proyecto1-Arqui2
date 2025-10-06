@@ -713,7 +713,7 @@ namespace cpu_tlp {
         m_registerFile.reset();
         m_registerFile.setPEID(m_pe_id);
 
-        // NUEVO: Sincronizar snapshot después del reset
+        // Sincronizar snapshot de registros después del reset
         if (m_sharedData) {
             for (int i = 0; i < 12; ++i) {
                 uint64_t val = m_registerFile.read(i);
@@ -722,6 +722,18 @@ namespace cpu_tlp {
         }
 
         m_hazards = {};
+
+        // Reset tracking de instrucciones (local)
+        m_stageInstructions.fill(NOP_INSTRUCTION);
+
+        // AGREGAR: Sincronizar tracking de instrucciones con SharedData
+        if (m_sharedData) {
+            for (int i = 0; i < 5; ++i) {
+                m_sharedData->pe_instruction_tracking[m_pe_id].stage_instructions[i].store(
+                    NOP_INSTRUCTION, std::memory_order_release
+                );
+            }
+        }
 
         // Reset señales compartidas (escritura)
         if (m_sharedData) {
@@ -879,16 +891,21 @@ namespace cpu_tlp {
     // ============================================================================
 
     void PE0Component::executeCycle() {
-        std::cout << "[PE" << m_pe_id << "] executeCycle() - PC=0x" << std::hex << PC_F << std::dec << "\n";
+        auto& instConn = m_sharedData->instruction_connections[m_pe_id];
 
-        // Orden inverso: WriteBack -> Memory -> Execute -> Decode -> Fetch
+        std::cout << "[PE" << m_pe_id << "] executeCycle() START - PC=0x" << std::hex << PC_F
+            << " PC_F(shared)=0x" << instConn.PC_F.load(std::memory_order_acquire) << std::dec << "\n";
+
+        // CALCULAR PCPlus8_F AQUÍ AL INICIO
+        PCPlus8_F = PC_F + 8;
+
         stageWriteBack();
         stageMemory();
         stageExecute();
         stageDecode();
         stageFetch();
 
-        // Actualizar flipflops (simula flanco de reloj)
+        // Actualizar flipflops
         if (!m_hazards.StallW) {
             MEM_WB = MEM_WB_next;
         }
@@ -897,8 +914,8 @@ namespace cpu_tlp {
         }
         if (!m_hazards.StallE) {
             if (m_hazards.FlushE) {
-                ID_EX = {}; // flush
-                ID_EX.ALUControl_D = 0x22; // NOTHING
+                ID_EX = {};
+                ID_EX.ALUControl_D = 0x22;
             }
             else {
                 ID_EX = ID_EX_next;
@@ -912,34 +929,42 @@ namespace cpu_tlp {
                 IF_ID = IF_ID_next;
             }
         }
+
+        uint64_t old_pc = PC_F;
         if (!m_hazards.StallF) {
             PC_F = PC_prime;
         }
+
+        // Escribir PC inmediatamente
+        instConn.PC_F.store(PC_F, std::memory_order_release);
+
+        std::cout << "  [executeCycle] END - PC changed: " << std::hex << old_pc << " -> " << PC_F
+            << " StallF=" << m_hazards.StallF << std::dec << "\n";
+
+        // ✅ NUEVO: Pequeño sleep para dar tiempo a InstructionMemory
+        std::this_thread::sleep_for(std::chrono::microseconds(5));
+
+        updateInstructionTracking();
     }
 
     // ============================================================================
-    // STAGE: FETCH
+    // STAGE: FETCH - VERSIÓN CORREGIDA
     // ============================================================================
 
     void PE0Component::stageFetch() {
         auto& instConn = m_sharedData->instruction_connections[m_pe_id];
 
-        // Escribir PC_F a la memoria de instrucciones
-        instConn.PC_F.store(PC_F, std::memory_order_release);
-
-        // Calcular PC + 8
-        PCPlus8_F = PC_F + 8;
-
-        // Leer INS_READY e Instr_F
+        // Leer señales
         bool ins_ready = instConn.INS_READY.load(std::memory_order_acquire);
         uint64_t instr = instConn.InstrF.load(std::memory_order_acquire);
 
-        // Preparar next flipflop
+        // PRINT DIAGNÓSTICO
+        std::cout << "  [stageFetch] PC=" << std::hex << PC_F
+            << " INS_READY=" << ins_ready
+            << " Instr=" << instr << std::dec << "\n";
+
         IF_ID_next.Instr_F = instr;
         IF_ID_next.PC_F = PC_F;
-
-        // Detectar hazards (incluye INS_READY)
-        // Se hará en stageDecode después de tener toda la info
     }
 
     // ============================================================================
@@ -1107,7 +1132,66 @@ namespace cpu_tlp {
         PC_prime = pcsrc ? aluOutW : PCPlus8_F;
     }
 
-} // namespace cpu_tlp
-    
 
-    
+    void PE0Component::updateInstructionTracking() {
+        std::array<uint64_t, 5> newInstructions;
+
+        // 0: Fetch - Mostrar NOP si la instrucción NO está lista
+        auto& instConn = m_sharedData->instruction_connections[m_pe_id];
+        bool ins_ready = instConn.INS_READY.load(std::memory_order_acquire);
+
+        if (ins_ready) {
+            newInstructions[0] = IF_ID_next.Instr_F;
+        }
+        else {
+            newInstructions[0] = NOP_INSTRUCTION; // Mostrar NOP mientras espera
+        }
+
+        // 1: Decode - Si hay stall, mantener valor
+        if (m_hazards.FlushD) {
+            newInstructions[1] = NOP_INSTRUCTION;
+        }
+        else if (!m_hazards.StallD) {
+            newInstructions[1] = m_stageInstructions[0];
+        }
+        else {
+            newInstructions[1] = m_stageInstructions[1];
+        }
+
+        // 2-4: Resto igual
+        if (m_hazards.FlushE) {
+            newInstructions[2] = NOP_INSTRUCTION;
+        }
+        else if (!m_hazards.StallE) {
+            newInstructions[2] = m_stageInstructions[1];
+        }
+        else {
+            newInstructions[2] = m_stageInstructions[2];
+        }
+
+        if (!m_hazards.StallM) {
+            newInstructions[3] = m_stageInstructions[2];
+        }
+        else {
+            newInstructions[3] = m_stageInstructions[3];
+        }
+
+        if (!m_hazards.StallW) {
+            newInstructions[4] = m_stageInstructions[3];
+        }
+        else {
+            newInstructions[4] = m_stageInstructions[4];
+        }
+
+        m_stageInstructions = newInstructions;
+
+        if (m_sharedData) {
+            for (int i = 0; i < 5; ++i) {
+                m_sharedData->pe_instruction_tracking[m_pe_id].stage_instructions[i].store(
+                    m_stageInstructions[i], std::memory_order_release
+                );
+            }
+        }
+    }
+
+} // namespace cpu_tlp

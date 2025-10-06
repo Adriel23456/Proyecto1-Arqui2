@@ -39,13 +39,13 @@ void PE0CPUView::render() {
         {
             // Coordenadas en "pixeles de imagen"
             constexpr float Y_IMG = 550.0f;     // vertical se mantiene
-            constexpr float X0_IMG = 2050.0f;    // 1er cuadro
+            constexpr float X0_IMG = 1800.0f;    // 1er cuadro
             constexpr float DX_IMG = 1400.0f;    // espaciamiento base
             constexpr float EXTRA_BETWEEN_2_3 = 250.0f; // <-- extra solo entre 2º y 3º
             constexpr int   COUNT = 5;
 
             // Tamaño MUY grande (en px de imagen), escala con la imagen
-            constexpr float BOX_W_IMG = 750.0f;
+            constexpr float BOX_W_IMG = 1200.0f;
             constexpr float BOX_H_IMG = 180.0f;
 
             const ImU32 FILL = IM_COL32(0, 0, 0, 220);

@@ -28,7 +28,7 @@ namespace cpu_tlp {
         std::atomic<bool> should_stop{ false };
     };
 
-    // NUEVO: Snapshot de registros para visualización (thread-safe)
+    // Snapshot de registros para visualización (thread-safe)
     struct PERegisterSnapshot {
         static constexpr int REG_COUNT = 12;
         std::array<std::atomic<uint64_t>, REG_COUNT> registers;
@@ -42,19 +42,36 @@ namespace cpu_tlp {
         }
     };
 
+    // MOVER ANTES: Tracking de instrucciones por etapa
+    struct PEInstructionTracking {
+        static constexpr int STAGE_COUNT = 5;
+        // Orden: Fetch, Decode, Execute, Memory, WriteBack
+        std::array<std::atomic<uint64_t>, STAGE_COUNT> stage_instructions;
+
+        PEInstructionTracking() {
+            for (auto& instr : stage_instructions) {
+                instr.store(0x4D00000000000000ULL, std::memory_order_relaxed); // NOP inicial
+            }
+        }
+    };
+
     struct InstructionMemorySharedData {
         std::array<PEInstructionConnection, 4> pe_connections;
         std::atomic<bool> should_stop{ false };
         std::atomic<bool> component_ready{ false };
     };
 
+    // AHORA sí puede usar PEInstructionTracking porque ya está definido
     struct CPUSystemSharedData {
         std::array<PEInstructionConnection, 4> instruction_connections;
         std::array<PECacheConnection, 4> cache_connections;
         std::array<PEControlSignals, 4> pe_control;
 
-        // NUEVO: Snapshots de registros para cada PE (solo lectura desde UI)
+        // Snapshots de registros para cada PE (solo lectura desde UI)
         std::array<PERegisterSnapshot, 4> pe_registers;
+
+        // Tracking de instrucciones para cada PE
+        std::array<PEInstructionTracking, 4> pe_instruction_tracking;
 
         std::atomic<bool> system_should_stop{ false };
     };

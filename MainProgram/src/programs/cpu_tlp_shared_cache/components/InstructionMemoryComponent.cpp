@@ -1,4 +1,4 @@
-#include "programs/cpu_tlp_shared_cache/components/InstructionMemoryComponent.h"
+ï»¿#include "programs/cpu_tlp_shared_cache/components/InstructionMemoryComponent.h"
 #include <fstream>
 #include <iostream>
 #include <chrono>
@@ -20,7 +20,6 @@ namespace cpu_tlp {
         shutdown();
     }
 
-    // En initialize()
     bool InstructionMemoryComponent::initialize(std::shared_ptr<CPUSystemSharedData> sharedData) {
         if (m_isRunning) {
             std::cerr << "[InstructionMemory] Component already running!" << std::endl;
@@ -35,7 +34,6 @@ namespace cpu_tlp {
         }
 
         m_isRunning = true;
-        // CAMBIO: Usa system_should_stop en lugar de should_stop
         m_sharedData->system_should_stop = false;
         m_executionThread = std::make_unique<std::thread>(&InstructionMemoryComponent::threadMain, this);
 
@@ -43,14 +41,12 @@ namespace cpu_tlp {
         return true;
     }
 
-    // En shutdown()
     void InstructionMemoryComponent::shutdown() {
         if (!m_isRunning) return;
 
         std::cout << "[InstructionMemory] Shutting down..." << std::endl;
 
         if (m_sharedData) {
-            // CAMBIO: Usa system_should_stop
             m_sharedData->system_should_stop = true;
         }
 
@@ -74,17 +70,14 @@ namespace cpu_tlp {
 
         if (!file.is_open()) {
             std::cerr << "[InstructionMemory] Could not open file: " << fullPath << std::endl;
-            // Crear un archivo vacío mínimo para pruebas
             m_instructionMemory.clear();
             m_memorySize = 0;
-            return true; // Continuamos aunque no haya archivo
+            return true;
         }
 
-        // Obtener el tamaño del archivo
         m_memorySize = static_cast<size_t>(file.tellg());
         file.seekg(0, std::ios::beg);
 
-        // Leer todo el archivo en memoria
         m_instructionMemory.resize(m_memorySize);
         file.read(reinterpret_cast<char*>(m_instructionMemory.data()), m_memorySize);
         file.close();
@@ -93,7 +86,6 @@ namespace cpu_tlp {
         return true;
     }
 
-    // En reloadInstructionMemory()
     bool InstructionMemoryComponent::reloadInstructionMemory() {
         std::cout << "[InstructionMemory] Reloading instruction memory..." << std::endl;
 
@@ -104,7 +96,6 @@ namespace cpu_tlp {
 
         if (success) {
             for (int i = 0; i < 4; ++i) {
-                // CAMBIO: Usa instruction_connections en lugar de pe_connections
                 auto& connection = m_sharedData->instruction_connections[i];
                 connection.PC_F.store(0x0000000000000000ULL, std::memory_order_release);
                 connection.INS_READY.store(false, std::memory_order_release);
@@ -136,37 +127,33 @@ namespace cpu_tlp {
     }
 
     uint64_t InstructionMemoryComponent::readInstructionFromFile(uint64_t address) {
-        // Verificar que la dirección esté dentro del rango válido
-        // Asumiendo que las instrucciones son de 8 bytes (64 bits)
         if (address + 8 > m_memorySize) {
-            // Dirección fuera de rango, retornar instrucción de error
             return ERROR_INSTRUCTION;
         }
 
-        // Leer 8 bytes desde la dirección especificada
         const uint8_t* instructionBytes = &m_instructionMemory[address];
-
-        // Convertir a uint64_t usando Little Endian
         return bytesToUint64LittleEndian(instructionBytes);
     }
 
-    // En processPERequest()
     void InstructionMemoryComponent::processPERequest(int peIndex) {
-        // CAMBIO: Usa instruction_connections en lugar de pe_connections
         auto& connection = m_sharedData->instruction_connections[peIndex];
-
         uint64_t currentPC = connection.PC_F.load(std::memory_order_acquire);
 
         static std::array<uint64_t, 4> lastPC = { 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
                                                   0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL };
 
         if (currentPC != lastPC[peIndex]) {
-            connection.INS_READY.store(false, std::memory_order_release);
-            std::this_thread::sleep_for(std::chrono::microseconds(10));
+            std::cout << "  [InstMem] PE" << peIndex << " DETECTED PC change: "
+                << std::hex << lastPC[peIndex] << " -> " << currentPC << std::dec << "\n";
 
+            connection.INS_READY.store(false, std::memory_order_release);
+
+            // Leer instrucciÃ³n
             uint64_t instruction = readInstructionFromFile(currentPC);
 
+            // Escribir instrucciÃ³n
             connection.InstrF.store(instruction, std::memory_order_release);
+
             connection.INS_READY.store(true, std::memory_order_release);
 
             lastPC[peIndex] = currentPC;
@@ -177,7 +164,6 @@ namespace cpu_tlp {
         }
     }
 
-    // En threadMain()
     void InstructionMemoryComponent::threadMain() {
         std::cout << "[InstructionMemory] Thread started" << std::endl;
 
@@ -186,18 +172,18 @@ namespace cpu_tlp {
             processPERequest(i);
         }
 
-        // CAMBIO: Usa system_should_stop
         while (!m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
             if (m_processingPaused.load(std::memory_order_acquire)) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 continue;
             }
 
+            // Procesar todos los PEs
             for (int i = 0; i < 4; ++i) {
                 processPERequest(i);
             }
 
-            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            std::this_thread::sleep_for(std::chrono::microseconds(1));
         }
 
         std::cout << "[InstructionMemory] Thread ending" << std::endl;

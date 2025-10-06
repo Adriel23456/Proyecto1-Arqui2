@@ -20,6 +20,7 @@
 #include "programs/cpu_tlp_shared_cache/components/SharedData.h"
 #include "programs/cpu_tlp_shared_cache/components/PE0Component.h"
 #include "programs/cpu_tlp_shared_cache/views/CompilerView.h"
+#include "programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h"
 #include <imgui.h>
 #include <iostream>
 #include <memory>
@@ -118,13 +119,26 @@ void CpuTLPSharedCacheState::handleEvent(sf::Event& e) {
 }
 
 void CpuTLPSharedCacheState::update(float dt) {
-    // NUEVO: Actualizar PE0RegView con los valores del snapshot
+    // Actualizar PE0RegView con registros
     if (auto* pe0RegView = dynamic_cast<PE0RegView*>(getView(Panel::PE0Reg))) {
         auto& snapshot = m_cpuSystemData->pe_registers[0];
         for (int i = 0; i < 12; ++i) {
             uint64_t value = snapshot.registers[i].load(std::memory_order_acquire);
             pe0RegView->setRegValueByIndex_(i, value);
         }
+    }
+
+    // NUEVO: Actualizar PE0CPUView con instrucciones
+    if (auto* pe0CPUView = dynamic_cast<PE0CPUView*>(getView(Panel::PE0CPU))) {
+        auto& tracking = m_cpuSystemData->pe_instruction_tracking[0];
+        std::array<std::string, 5> labels;
+
+        for (int i = 0; i < 5; ++i) {
+            uint64_t instr = tracking.stage_instructions[i].load(std::memory_order_acquire);
+            labels[i] = cpu_tlp::InstructionDisassembler::disassemble(instr);
+        }
+
+        pe0CPUView->setLabels(labels);
     }
 
     // Actualizar otras vistas

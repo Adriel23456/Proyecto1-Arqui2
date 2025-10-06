@@ -202,6 +202,12 @@ namespace cpu_tlp {
 
         // Constantes
         static constexpr uint64_t NOP_INSTRUCTION = 0x4D00000000000000ULL;
+
+        // Tracking de instrucciones por etapa
+        std::array<uint64_t, 5> m_stageInstructions;
+
+        // Helper para actualizar tracking
+        void updateInstructionTracking();
     };
 
 } // namespace cpu_tlp
