@@ -9,16 +9,16 @@
   },
   "ExpandedNodes": [
     "",
-    "\\include",
-    "\\include\\programs",
     "\\include\\programs\\cpu_tlp_shared_cache",
     "\\include\\programs\\cpu_tlp_shared_cache\\components",
-    "\\src",
+    "\\include\\programs\\cpu_tlp_shared_cache\\widgets",
+    "\\out",
+    "\\out\\build",
     "\\src\\programs",
     "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\utils",
+    "\\src\\programs\\cpu_tlp_shared_cache\\components",
     "\\src\\programs\\cpu_tlp_shared_cache\\widgets"
   ],
-  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
+  "SelectedNode": "\\out\\build",
   "PreviewInSolutionExplorer": false
 }

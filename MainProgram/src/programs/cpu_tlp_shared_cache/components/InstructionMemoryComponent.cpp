@@ -1,4 +1,5 @@
 ﻿#include "programs/cpu_tlp_shared_cache/components/InstructionMemoryComponent.h"
+#include "programs/cpu_tlp_shared_cache/widgets/Log.h"
 #include <fstream>
 #include <iostream>
 #include <chrono>
@@ -82,7 +83,10 @@ namespace cpu_tlp {
         file.read(reinterpret_cast<char*>(m_instructionMemory.data()), m_memorySize);
         file.close();
 
-        std::cout << "[InstructionMemory] Loaded " << m_memorySize << " bytes from " << INSTRUCTION_FILE_PATH << std::endl;
+        log_build_and_print([&](std::ostringstream& oss) {
+            oss << "[InstructionMemory] Loaded " << m_memorySize
+                << " bytes from " << INSTRUCTION_FILE_PATH << "\n";
+            });
         return true;
     }
 
@@ -143,8 +147,10 @@ namespace cpu_tlp {
                                                   0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL };
 
         if (currentPC != lastPC[peIndex]) {
-            std::cout << "  [InstMem] PE" << peIndex << " DETECTED PC change: "
-                << std::hex << lastPC[peIndex] << " -> " << currentPC << std::dec << "\n";
+            log_build_and_print([&](std::ostringstream& oss) {
+                oss << "  [InstMem] PE" << peIndex << " DETECTED PC change: "
+                    << std::hex << lastPC[peIndex] << " -> " << currentPC << std::dec << "\n";
+                });
 
             connection.INS_READY.store(false, std::memory_order_release);
 
@@ -158,9 +164,11 @@ namespace cpu_tlp {
 
             lastPC[peIndex] = currentPC;
 
-            std::cout << "[InstructionMemory] PE" << peIndex
-                << " - PC: 0x" << std::hex << currentPC
-                << " - Instruction: 0x" << instruction << std::dec << std::endl;
+            log_build_and_print([&](std::ostringstream& oss) {
+                oss << "[InstructionMemory] PE" << peIndex
+                    << " - PC: 0x" << std::hex << currentPC
+                    << " - Instruction: 0x" << instruction << std::dec << "\n";
+                });
         }
     }
 

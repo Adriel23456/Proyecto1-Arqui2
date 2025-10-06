@@ -133,12 +133,24 @@ void CpuTLPSharedCacheState::update(float dt) {
         auto& tracking = m_cpuSystemData->pe_instruction_tracking[0];
         std::array<std::string, 5> labels;
 
-        for (int i = 0; i < 5; ++i) {
-            uint64_t instr = tracking.stage_instructions[i].load(std::memory_order_acquire);
-            labels[i] = cpu_tlp::InstructionDisassembler::disassemble(instr);
-        }
+        for (int attempt = 0; attempt < 2; ++attempt) {
+            uint64_t v1 = tracking.version.load(std::memory_order_acquire);
+            if (v1 & 1ULL) continue; // en escritura, reintenta
 
-        pe0CPUView->setLabels(labels);
+            uint64_t raw[5];
+            for (int i = 0; i < 5; ++i) {
+                raw[i] = tracking.stage_instructions[i].load(std::memory_order_acquire);
+            }
+
+            uint64_t v2 = tracking.version.load(std::memory_order_acquire);
+            if (v1 == v2 && !(v2 & 1ULL)) {
+                for (int i = 0; i < 5; ++i) {
+                    labels[i] = cpu_tlp::InstructionDisassembler::disassemble(raw[i]);
+                }
+                pe0CPUView->setLabels(labels);
+                break;
+            }
+        }
     }
 
     // Actualizar otras vistas

@@ -40,14 +40,21 @@ void GeneralView::render() {
     ImGui::Dummy(ImVec2(1.0f, BETWEEN));
 
     const float GAP = 10.0f;
-    float segmentW = (avail.x - 3.0f * GAP) / 4.0f;
-    if (segmentW < 0.0f) segmentW = 0.0f;
+    const ImVec2 padding = ImGui::GetStyle().FramePadding;
+    const float textPadding = 30.0f; // espacio adicional alrededor del texto
+
+    // Cálculo dinámico de anchos de botones según el texto
+    float wReset = ImGui::CalcTextSize("RESET").x + textPadding;
+    float wStep = ImGui::CalcTextSize("Step").x + textPadding;
+    float wStepUntil = ImGui::CalcTextSize("StepUntilNum").x + textPadding;
+    float wInf = ImGui::CalcTextSize("InfiniteStep").x + textPadding;
+    float wStop = ImGui::CalcTextSize("STOP").x + textPadding;
 
     // RESET
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.70f, 0.15f, 0.15f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.82f, 0.22f, 0.22f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.60f, 0.12f, 0.12f, 1.0f));
-    if (ImGui::Button("RESET", ImVec2(segmentW, BOTTOM_H))) {
+    if (ImGui::Button("RESET", ImVec2(wReset, BOTTOM_H))) {
         if (cpu_tlp_ui::onResetPE0) cpu_tlp_ui::onResetPE0();
     }
     ImGui::PopStyleColor(3);
@@ -55,29 +62,30 @@ void GeneralView::render() {
     ImGui::SameLine(0.0f, GAP);
 
     // Step
-    if (ImGui::Button("Step", ImVec2(segmentW, BOTTOM_H))) {
+    if (ImGui::Button("Step", ImVec2(wStep, BOTTOM_H))) {
         if (cpu_tlp_ui::onStepPE0) cpu_tlp_ui::onStepPE0();
     }
 
     ImGui::SameLine(0.0f, GAP);
 
-    // Grupo: InputInt + StepUntilNum
+    // Grupo: InputInt (sin + -) + StepUntilNum
     ImGui::BeginGroup();
     if (m_untilSteps < 1) m_untilSteps = 1;
 
-    const float inputW = 90.0f;
+    float inputW = avail.x * 0.15f; // campo más grande
     ImGui::PushItemWidth(inputW);
+
     int tmp = m_untilSteps;
-    ImGui::InputInt("##until_steps", &tmp);
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsDecimal;
+    ImGui::InputScalar("##until_steps", ImGuiDataType_S32, &tmp, nullptr, nullptr, nullptr, flags);
+
     if (tmp < 1) tmp = 1;
     m_untilSteps = tmp;
     ImGui::PopItemWidth();
 
     ImGui::SameLine();
-    float btnUntilW = segmentW - inputW - ImGui::GetStyle().ItemSpacing.x;
-    if (btnUntilW < 80.0f) btnUntilW = 80.0f;
 
-    if (ImGui::Button("StepUntilNum", ImVec2(btnUntilW, BOTTOM_H))) {
+    if (ImGui::Button("StepUntilNum", ImVec2(wStepUntil, BOTTOM_H))) {
         if (cpu_tlp_ui::onStepUntilPE0) cpu_tlp_ui::onStepUntilPE0(m_untilSteps);
     }
     ImGui::EndGroup();
@@ -88,13 +96,13 @@ void GeneralView::render() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12f, 0.55f, 0.20f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.18f, 0.68f, 0.28f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.09f, 0.45f, 0.16f, 1.0f));
-    if (ImGui::Button("InfiniteStep", ImVec2(segmentW * 0.6f, BOTTOM_H))) {
+    if (ImGui::Button("InfiniteStep", ImVec2(wInf, BOTTOM_H))) {
         if (cpu_tlp_ui::onStepIndefinitelyPE0) cpu_tlp_ui::onStepIndefinitelyPE0();
     }
     ImGui::PopStyleColor(3);
 
     ImGui::SameLine();
-    if (ImGui::Button("STOP", ImVec2(segmentW * 0.4f - GAP, BOTTOM_H))) {
+    if (ImGui::Button("STOP", ImVec2(wStop, BOTTOM_H))) {
         if (cpu_tlp_ui::onStopPE0) cpu_tlp_ui::onStopPE0();
     }
 }

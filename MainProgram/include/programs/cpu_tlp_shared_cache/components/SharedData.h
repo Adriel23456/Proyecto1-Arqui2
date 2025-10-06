@@ -44,6 +44,8 @@ namespace cpu_tlp {
 
     // MOVER ANTES: Tracking de instrucciones por etapa
     struct PEInstructionTracking {
+        std::atomic<uint64_t> version{ 0 };  // seqlock: par = estable, impar = escribiendo
+
         static constexpr int STAGE_COUNT = 5;
         // Orden: Fetch, Decode, Execute, Memory, WriteBack
         std::array<std::atomic<uint64_t>, STAGE_COUNT> stage_instructions;

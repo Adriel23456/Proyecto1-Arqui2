@@ -164,6 +164,14 @@ namespace cpu_tlp {
     }
 
     std::string InstructionDisassembler::disassemble(uint64_t instruction) {
+        // Casos especiales primero
+        if (instruction == 0x4D00000000000000ULL) {
+            return "NOP";
+        }
+        if (instruction == 0x4D00000000000001ULL) { // NUEVO
+            return "FLUSH";
+        }
+
         // Extraer campos
         uint8_t opcode = (instruction >> 56) & 0xFF;
         uint8_t rd = (instruction >> 52) & 0xF;

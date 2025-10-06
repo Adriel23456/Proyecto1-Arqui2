@@ -1,7 +1,11 @@
 ﻿#include "programs/cpu_tlp_shared_cache/components/PE0Component.h"
+#include "programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h"
+#include "programs/cpu_tlp_shared_cache/widgets/Log.h"
 #include <chrono>
 #include <thread>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <cmath>
 #include <cstring>
 #include <algorithm>
@@ -475,58 +479,94 @@ namespace cpu_tlp {
     }
 
     // ============================================================================
-    // HAZARDUNIT
+    // HAZARDUNIT - VERSIÓN CORREGIDA SIN std::to_string
     // ============================================================================
 
-    PE0Component::HazardUnit::Outputs PE0Component::HazardUnit::detect(
-        bool INS_READY,
-        bool C_REQUEST_M, bool C_READY,
-        bool SegmentationFault,
-        bool PCSrc_AND,
-        uint8_t Rd_in_D, uint8_t Rn_in, uint8_t Rm_in,
-        uint8_t Rd_in_E, uint8_t Rd_in_M, uint8_t Rd_in_W,
-        bool RegWrite_E, bool RegWrite_M, bool RegWrite_W,
-        bool BranchE
-    ) {
+    PE0Component::HazardUnit::Outputs
+        PE0Component::HazardUnit::detect(
+            bool INS_READY,
+            bool C_REQUEST_M, bool C_READY,
+            bool SegmentationFault,
+            bool PCSrc_AND,
+            uint8_t Rd_in_D, uint8_t Rn_in, uint8_t Rm_in,
+            uint8_t Rd_in_E, uint8_t Rd_in_M, uint8_t Rd_in_W,
+            bool RegWrite_E, bool RegWrite_M, bool RegWrite_W,
+            bool BranchE
+        ) {
         Outputs out;
         out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = false;
         out.FlushD = out.FlushE = false;
 
-        // 1. SegmentationFault: FULL STALL
+        // Inputs (atómico)
+        log_build_and_print([&](std::ostringstream& oss) {
+            oss << "  [HazardUnit] Inputs: Rd_D=" << (int)Rd_in_D
+                << " Rn=" << (int)Rn_in << " Rm=" << (int)Rm_in
+                << " | Rd_E=" << (int)Rd_in_E << "(RegWr=" << (int)RegWrite_E << ")"
+                << " Rd_M=" << (int)Rd_in_M << "(RegWr=" << (int)RegWrite_M << ")"
+                << " Rd_W=" << (int)Rd_in_W << "(RegWr=" << (int)RegWrite_W << ")\n";
+            });
+
+        // 1. SegmentationFault
         if (SegmentationFault) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
-            std::cerr << "[PE HazardUnit] SegmentationFault detected! Full stall.\n";
+            log_line("  [HazardUnit] SEGFAULT -> Full stall\n");
             return out;
         }
 
-        // 2. InstructionLatency: FULL STALL hasta INS_READY
+        // 2. InstructionLatency
         if (!INS_READY) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
+            log_line("  [HazardUnit] !INS_READY -> Full stall\n");
             return out;
         }
 
-        // 3. CacheLatency: FULL STALL mientras C_REQUEST && !C_READY
+        // 3. CacheLatency
         if (C_REQUEST_M && !C_READY) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
+            log_line("  [HazardUnit] Cache latency -> Full stall\n");
             return out;
         }
 
-        // 4. RAW: Detección de dependencias
+        // 4. RAW
         bool rawHazard = false;
 
-        // Verificar si Rn o Rm dependen de Rd en etapas posteriores
-        if (Rn_in != 0) { // REG0 nunca genera hazard
-            if (RegWrite_E && Rd_in_E != 0 && Rd_in_E == Rn_in) rawHazard = true;
-            if (RegWrite_M && Rd_in_M != 0 && Rd_in_M == Rn_in) rawHazard = true;
+        if (Rn_in != 0) {
+            if (RegWrite_E && Rd_in_E != 0 && Rd_in_E == Rn_in) {
+                rawHazard = true;
+                log_build_and_print([&](std::ostringstream& oss) {
+                    oss << "  [HazardUnit] RAW: Rn=" << (int)Rn_in
+                        << " depends on Rd_E=" << (int)Rd_in_E << "\n";
+                    });
+            }
+            if (RegWrite_M && Rd_in_M != 0 && Rd_in_M == Rn_in) {
+                rawHazard = true;
+                log_build_and_print([&](std::ostringstream& oss) {
+                    oss << "  [HazardUnit] RAW: Rn=" << (int)Rn_in
+                        << " depends on Rd_M=" << (int)Rd_in_M << "\n";
+                    });
+            }
         }
         if (Rm_in != 0) {
-            if (RegWrite_E && Rd_in_E != 0 && Rd_in_E == Rm_in) rawHazard = true;
-            if (RegWrite_M && Rd_in_M != 0 && Rd_in_M == Rm_in) rawHazard = true;
+            if (RegWrite_E && Rd_in_E != 0 && Rd_in_E == Rm_in) {
+                rawHazard = true;
+                log_build_and_print([&](std::ostringstream& oss) {
+                    oss << "  [HazardUnit] RAW: Rm=" << (int)Rm_in
+                        << " depends on Rd_E=" << (int)Rd_in_E << "\n";
+                    });
+            }
+            if (RegWrite_M && Rd_in_M != 0 && Rd_in_M == Rm_in) {
+                rawHazard = true;
+                log_build_and_print([&](std::ostringstream& oss) {
+                    oss << "  [HazardUnit] RAW: Rm=" << (int)Rm_in
+                        << " depends on Rd_M=" << (int)Rd_in_M << "\n";
+                    });
+            }
         }
 
         if (rawHazard) {
             out.StallF = out.StallD = true;
             out.FlushE = true;
+            log_line("  [HazardUnit] -> Applying: StallF, StallD, FlushE\n");
             return out;
         }
 
@@ -535,6 +575,7 @@ namespace cpu_tlp {
             if (!branchActive) {
                 branchActive = true;
                 branchCycles = 0;
+                log_line("  [HazardUnit] Branch detected, starting handling\n");
             }
         }
 
@@ -542,25 +583,37 @@ namespace cpu_tlp {
             branchCycles++;
 
             if (PCSrc_AND) {
-                // Branch tomado: 4 flushes en D
                 if (branchCycles <= 4) {
                     out.StallF = true;
                     out.FlushD = true;
+                    log_build_and_print([&](std::ostringstream& oss) {
+                        oss << "  [HazardUnit] Branch taken (cycle "
+                            << branchCycles << "/4) -> StallF, FlushD\n";
+                        });
                 }
                 else {
                     branchActive = false;
+                    log_line("  [HazardUnit] Branch taken complete\n");
                 }
             }
             else {
-                // Branch no tomado: 1 flush en D
                 if (branchCycles <= 1) {
                     out.StallF = true;
                     out.FlushD = true;
+                    log_build_and_print([&](std::ostringstream& oss) {
+                        oss << "  [HazardUnit] Branch not taken (cycle "
+                            << branchCycles << "/1) -> StallF, FlushD\n";
+                        });
                 }
                 else {
                     branchActive = false;
+                    log_line("  [HazardUnit] Branch not taken complete\n");
                 }
             }
+        }
+
+        if (!rawHazard && !branchActive) {
+            log_line("  [HazardUnit] No hazards detected\n");
         }
 
         return out;
@@ -700,9 +753,12 @@ namespace cpu_tlp {
 
         ID_EX = ID_EX_next = {};
         ID_EX.ALUControl_D = 0x22;
+        ID_EX.Instr_D = NOP_INSTRUCTION;
 
         EX_MEM = EX_MEM_next = {};
+        EX_MEM.Instr_E = NOP_INSTRUCTION;
         MEM_WB = MEM_WB_next = {};
+        MEM_WB.Instr_M = NOP_INSTRUCTION;
 
         InstrD = NOP_INSTRUCTION;
         PC_in = 0x0;
@@ -893,10 +949,13 @@ namespace cpu_tlp {
     void PE0Component::executeCycle() {
         auto& instConn = m_sharedData->instruction_connections[m_pe_id];
 
-        std::cout << "[PE" << m_pe_id << "] executeCycle() START - PC=0x" << std::hex << PC_F
-            << " PC_F(shared)=0x" << instConn.PC_F.load(std::memory_order_acquire) << std::dec << "\n";
+        log_build_and_print([&](std::ostringstream& oss) {
+            oss << "[PE" << m_pe_id << "] executeCycle() START - PC=0x"
+                << std::hex << PC_F
+                << " PC_F(shared)=0x" << instConn.PC_F.load(std::memory_order_acquire)
+                << std::dec << "\n";
+            });
 
-        // CALCULAR PCPlus8_F AQUÍ AL INICIO
         PCPlus8_F = PC_F + 8;
 
         stageWriteBack();
@@ -905,7 +964,10 @@ namespace cpu_tlp {
         stageDecode();
         stageFetch();
 
-        // Actualizar flipflops
+        // ============ CRÍTICO: TOMAR SNAPSHOT ANTES DEL LATCH ============
+        updateInstructionTracking();
+
+        // Actualizar flipflops DESPUÉS de la visualización
         if (!m_hazards.StallW) {
             MEM_WB = MEM_WB_next;
         }
@@ -916,6 +978,7 @@ namespace cpu_tlp {
             if (m_hazards.FlushE) {
                 ID_EX = {};
                 ID_EX.ALUControl_D = 0x22;
+                ID_EX.Instr_D = FLUSH_INSTRUCTION;
             }
             else {
                 ID_EX = ID_EX_next;
@@ -923,7 +986,7 @@ namespace cpu_tlp {
         }
         if (!m_hazards.StallD) {
             if (m_hazards.FlushD) {
-                IF_ID.Instr_F = NOP_INSTRUCTION;
+                IF_ID.Instr_F = FLUSH_INSTRUCTION;
             }
             else {
                 IF_ID = IF_ID_next;
@@ -935,16 +998,15 @@ namespace cpu_tlp {
             PC_F = PC_prime;
         }
 
-        // Escribir PC inmediatamente
         instConn.PC_F.store(PC_F, std::memory_order_release);
 
-        std::cout << "  [executeCycle] END - PC changed: " << std::hex << old_pc << " -> " << PC_F
-            << " StallF=" << m_hazards.StallF << std::dec << "\n";
+        log_build_and_print([&](std::ostringstream& oss) {
+            oss << "  [executeCycle] END - PC changed: "
+                << std::hex << old_pc << " -> " << PC_F
+                << " StallF=" << std::dec << m_hazards.StallF << "\n";
+            });
 
-        // ✅ NUEVO: Pequeño sleep para dar tiempo a InstructionMemory
         std::this_thread::sleep_for(std::chrono::microseconds(5));
-
-        updateInstructionTracking();
     }
 
     // ============================================================================
@@ -958,10 +1020,12 @@ namespace cpu_tlp {
         bool ins_ready = instConn.INS_READY.load(std::memory_order_acquire);
         uint64_t instr = instConn.InstrF.load(std::memory_order_acquire);
 
-        // PRINT DIAGNÓSTICO
-        std::cout << "  [stageFetch] PC=" << std::hex << PC_F
-            << " INS_READY=" << ins_ready
-            << " Instr=" << instr << std::dec << "\n";
+        // PRINT DIAGNÓSTICO (atómico)
+        log_build_and_print([&](std::ostringstream& oss) {
+            oss << "  [stageFetch] PC=" << std::hex << PC_F
+                << " INS_READY=" << std::dec << (int)ins_ready
+                << " Instr=0x" << std::hex << instr << std::dec << "\n";
+            });
 
         IF_ID_next.Instr_F = instr;
         IF_ID_next.PC_F = PC_F;
@@ -997,8 +1061,10 @@ namespace cpu_tlp {
         if (PC_in < UPPER_out || PC_in > LOWER_out) {
             SegmentationFault = true;
             m_segmentationFault = true;
-            std::cerr << "[PE" << m_pe_id << "] SEGMENTATION FAULT at PC=0x"
-                << std::hex << PC_in << std::dec << "\n";
+            log_build_and_print([&](std::ostringstream& oss) {
+                oss << "[PE" << m_pe_id << "] SEGMENTATION FAULT at PC=0x"
+                    << std::hex << PC_in << std::dec << "\n";
+                });
         }
 
         // Extend
@@ -1026,6 +1092,18 @@ namespace cpu_tlp {
             ctrlSignals.BranchE
         );
 
+        // Hazards aplicados (atómico)
+        log_build_and_print([&](std::ostringstream& oss) {
+            oss << "  [stageDecode] Hazards applied: "
+                << "StallF=" << m_hazards.StallF
+                << " StallD=" << m_hazards.StallD
+                << " FlushD=" << m_hazards.FlushD
+                << " StallE=" << m_hazards.StallE
+                << " FlushE=" << m_hazards.FlushE
+                << " StallM=" << m_hazards.StallM
+                << " StallW=" << m_hazards.StallW << "\n";
+            });
+
         // Preparar next flipflop
         ID_EX_next.RegWrite_D = ctrlSignals.RegWrite_D;
         ID_EX_next.MemOp_D = ctrlSignals.MemOp_D;
@@ -1041,6 +1119,8 @@ namespace cpu_tlp {
         ID_EX_next.SrcB_D = SrcB_D;
         ID_EX_next.RD_Rm_out = RD_Rm_out;
         ID_EX_next.Rd_in_D = Rd_in_D;
+
+        ID_EX_next.Instr_D = InstrD;  // << ESTA ES LA INSTRUCCIÓN EN DECODE
     }
 
     // ============================================================================
@@ -1082,6 +1162,8 @@ namespace cpu_tlp {
         EX_MEM_next.ALUResult_E = ALUResult_E;
         EX_MEM_next.RD_Rm_Special_E = ID_EX.RD_Rm_out;
         EX_MEM_next.Rd_in_E = ID_EX.Rd_in_D;
+
+        EX_MEM_next.Instr_E = ID_EX.Instr_D;
     }
 
     // ============================================================================
@@ -1112,6 +1194,8 @@ namespace cpu_tlp {
         MEM_WB_next.PCSrc_M = EX_MEM.PCSrc_AND;
         MEM_WB_next.ALUOutM_O = ALUOutM_O;
         MEM_WB_next.Rd_in_M = EX_MEM.Rd_in_E;
+
+        MEM_WB_next.Instr_M = EX_MEM.Instr_E;
     }
 
     // ============================================================================
@@ -1132,65 +1216,38 @@ namespace cpu_tlp {
         PC_prime = pcsrc ? aluOutW : PCPlus8_F;
     }
 
-
     void PE0Component::updateInstructionTracking() {
-        std::array<uint64_t, 5> newInstructions;
+        // Snapshot *después* del latch de este ciclo:
+        std::array<uint64_t, 5> snap;
 
-        // 0: Fetch - Mostrar NOP si la instrucción NO está lista
-        auto& instConn = m_sharedData->instruction_connections[m_pe_id];
-        bool ins_ready = instConn.INS_READY.load(std::memory_order_acquire);
+        // F: lo recién fetcheado este ciclo
+        snap[0] = IF_ID_next.Instr_F;
+        // D..W: lo que quedó latcheado tras aplicar stalls/flushes
+        snap[1] = IF_ID.Instr_F;
+        snap[2] = ID_EX.Instr_D;
+        snap[3] = EX_MEM.Instr_E;
+        snap[4] = MEM_WB.Instr_M;
 
-        if (ins_ready) {
-            newInstructions[0] = IF_ID_next.Instr_F;
-        }
-        else {
-            newInstructions[0] = NOP_INSTRUCTION; // Mostrar NOP mientras espera
-        }
+        m_stageInstructions = snap;
 
-        // 1: Decode - Si hay stall, mantener valor
-        if (m_hazards.FlushD) {
-            newInstructions[1] = NOP_INSTRUCTION;
-        }
-        else if (!m_hazards.StallD) {
-            newInstructions[1] = m_stageInstructions[0];
-        }
-        else {
-            newInstructions[1] = m_stageInstructions[1];
-        }
+        // (Opcional pero recomendado) Usa el desensamblador consistente
+        // en el log, para evitar discrepancias NAME vs UI.
+        log_build_and_print([&](std::ostringstream& oss) {
+            oss << "  [PIPELINE] F: " << InstructionDisassembler::disassemble(snap[0])
+                << " | D: " << InstructionDisassembler::disassemble(snap[1])
+                << " | E: " << InstructionDisassembler::disassemble(snap[2])
+                << " | M: " << InstructionDisassembler::disassemble(snap[3])
+                << " | W: " << InstructionDisassembler::disassemble(snap[4]) << "\n";
+            });
 
-        // 2-4: Resto igual
-        if (m_hazards.FlushE) {
-            newInstructions[2] = NOP_INSTRUCTION;
-        }
-        else if (!m_hazards.StallE) {
-            newInstructions[2] = m_stageInstructions[1];
-        }
-        else {
-            newInstructions[2] = m_stageInstructions[2];
-        }
-
-        if (!m_hazards.StallM) {
-            newInstructions[3] = m_stageInstructions[2];
-        }
-        else {
-            newInstructions[3] = m_stageInstructions[3];
-        }
-
-        if (!m_hazards.StallW) {
-            newInstructions[4] = m_stageInstructions[3];
-        }
-        else {
-            newInstructions[4] = m_stageInstructions[4];
-        }
-
-        m_stageInstructions = newInstructions;
-
+        // Publicación a la UI: escribe con "seqlock" simple para evitar tearing visual
         if (m_sharedData) {
+            auto& track = m_sharedData->pe_instruction_tracking[m_pe_id];
+            track.version.fetch_add(1, std::memory_order_acq_rel); // impar = escribiendo
             for (int i = 0; i < 5; ++i) {
-                m_sharedData->pe_instruction_tracking[m_pe_id].stage_instructions[i].store(
-                    m_stageInstructions[i], std::memory_order_release
-                );
+                track.stage_instructions[i].store(snap[i], std::memory_order_release);
             }
+            track.version.fetch_add(1, std::memory_order_acq_rel); // par = estable
         }
     }
 

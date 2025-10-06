@@ -6,6 +6,7 @@
 #include <array>
 #include <atomic>
 #include <functional>
+#include <string>
 
 namespace cpu_tlp {
 
@@ -53,6 +54,8 @@ namespace cpu_tlp {
             uint64_t SrcB_D;
             uint64_t RD_Rm_out;
             uint8_t Rd_in_D;
+            // NUEVO: instrucción que entra a Execute
+            uint64_t Instr_D = 0x4D00000000000000ULL; // NOP
         };
 
         struct ExecuteMemoryReg {
@@ -65,6 +68,8 @@ namespace cpu_tlp {
             uint64_t ALUResult_E;
             uint64_t RD_Rm_Special_E;
             uint8_t Rd_in_E;
+            // NUEVO: instrucción que entra a Memory
+            uint64_t Instr_E = 0x4D00000000000000ULL; // NOP
         };
 
         struct MemoryWriteBackReg {
@@ -72,6 +77,8 @@ namespace cpu_tlp {
             uint8_t PCSrc_M;
             uint64_t ALUOutM_O;
             uint8_t Rd_in_M;
+            // NUEVO: instrucción que entra a WriteBack
+            uint64_t Instr_M = 0x4D00000000000000ULL; // NOP
         };
 
         // ============ UNIDADES FUNCIONALES ============
@@ -202,6 +209,7 @@ namespace cpu_tlp {
 
         // Constantes
         static constexpr uint64_t NOP_INSTRUCTION = 0x4D00000000000000ULL;
+        static constexpr uint64_t FLUSH_INSTRUCTION = 0x4D00000000000001ULL;
 
         // Tracking de instrucciones por etapa
         std::array<uint64_t, 5> m_stageInstructions;
