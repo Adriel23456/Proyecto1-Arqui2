@@ -136,14 +136,17 @@ namespace cpu_tlp {
                 bool C_REQUEST_M, bool C_READY,
                 bool SegmentationFault,
                 bool PCSrc_AND,
+                bool PCSrc_W,
                 uint8_t Rd_in_D, uint8_t Rn_in, uint8_t Rm_in,
                 uint8_t Rd_in_E, uint8_t Rd_in_M, uint8_t Rd_in_W,
                 bool RegWrite_E, bool RegWrite_M, bool RegWrite_W,
-                bool BranchE
+                bool BranchE,
+                uint8_t BranchOp_E
             );
         private:
             int branchCycles = 0;
             bool branchActive = false;
+            bool branchWaitingForW = false;
         };
 
         // ============ ETAPAS DEL PIPELINE ============

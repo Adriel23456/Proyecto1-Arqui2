@@ -306,11 +306,39 @@ namespace cpu_tlp {
             sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 0;
             break;
 
-            // 0x1E-0x22: Operaciones floating point sin inmediato
-        case 0x1E: case 0x1F: case 0x20: case 0x21: case 0x22:
+            // 0x1E-0x27: Operaciones floating point SIN inmediato
+        case 0x1E: // FADD Rd, Rn, Rm
             sig.RegWrite_D = 1; sig.MemOp_D = 0; sig.C_WE_D = 0;
             sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
-            sig.FlagsUpd_D = 1; sig.ALUControl_D = opcode;
+            sig.FlagsUpd_D = 0; sig.ALUControl_D = 0x0E;  // FADD
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+
+        case 0x1F: // FSUB Rd, Rn, Rm
+            sig.RegWrite_D = 1; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 0; sig.ALUControl_D = 0x0F;  // FSUB
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+
+        case 0x20: // FMUL Rd, Rn, Rm
+            sig.RegWrite_D = 1; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 0; sig.ALUControl_D = 0x10;  // FMUL
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+
+        case 0x21: // FDIV Rd, Rn, Rm ← ESTE FALTABA
+            sig.RegWrite_D = 1; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 0; sig.ALUControl_D = 0x11;  // FDIV
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+
+        case 0x22: // FCOPYSIGN Rd, Rn, Rm
+            sig.RegWrite_D = 1; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 0; sig.ALUControl_D = 0x12;  // FCOPYSIGN
             sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
             break;
 
@@ -391,12 +419,60 @@ namespace cpu_tlp {
             break;
 
             // 0x37-0x3E: Comparaciones sin escritura
-        case 0x37: case 0x38: case 0x39: case 0x3A:
-        case 0x3B: case 0x3C: case 0x3D: case 0x3E:
+        case 0x37: // CMP (Rn - Rm)
             sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
             sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
-            sig.FlagsUpd_D = 1; sig.ALUControl_D = opcode - 0x37;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x01; // SUB
             sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+
+        case 0x38: // CMN (Rn + Rm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x00; // ADD
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+
+        case 0x39: // TST (Rn & Rm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x06; // AND
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+
+        case 0x3A: // TEQ (Rn ^ Rm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x08; // EOR
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 0; sig.DataType = 0;
+            break;
+
+        case 0x3B: // CMPI (Rn - Imm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x01; // SUB
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 0;
+            break;
+
+        case 0x3C: // CMNI (Rn + Imm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x00; // ADD
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 0;
+            break;
+
+        case 0x3D: // TSTI (Rn & Imm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x06; // AND
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 0;
+            break;
+
+        case 0x3E: // TEQI (Rn ^ Imm)
+            sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
+            sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
+            sig.FlagsUpd_D = 1; sig.ALUControl_D = 0x08; // EOR
+            sig.BranchOp_D = 0; sig.BranchE = 0; sig.ImmOp = 1; sig.DataType = 0;
             break;
 
             // 0x3F-0x44: Comparaciones floating point
@@ -414,7 +490,8 @@ namespace cpu_tlp {
             sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
             sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 1;
             sig.FlagsUpd_D = 0; sig.ALUControl_D = 0;
-            sig.BranchOp_D = opcode - 0x45 + 1; sig.BranchE = 0;
+            sig.BranchOp_D = opcode - 0x45 + 1;
+            sig.BranchE = 1;  // ← CAMBIAR DE 0 A 1
             sig.ImmOp = 1; sig.DataType = 0;
             break;
 
@@ -488,22 +565,25 @@ namespace cpu_tlp {
             bool C_REQUEST_M, bool C_READY,
             bool SegmentationFault,
             bool PCSrc_AND,
+            bool PCSrc_W,  // ← NUEVO
             uint8_t Rd_in_D, uint8_t Rn_in, uint8_t Rm_in,
             uint8_t Rd_in_E, uint8_t Rd_in_M, uint8_t Rd_in_W,
             bool RegWrite_E, bool RegWrite_M, bool RegWrite_W,
-            bool BranchE
+            bool BranchE,
+            uint8_t BranchOp_E
         ) {
         Outputs out;
         out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = false;
         out.FlushD = out.FlushE = false;
 
-        // Inputs (atómico)
         log_build_and_print([&](std::ostringstream& oss) {
             oss << "  [HazardUnit] Inputs: Rd_D=" << (int)Rd_in_D
                 << " Rn=" << (int)Rn_in << " Rm=" << (int)Rm_in
                 << " | Rd_E=" << (int)Rd_in_E << "(RegWr=" << (int)RegWrite_E << ")"
                 << " Rd_M=" << (int)Rd_in_M << "(RegWr=" << (int)RegWrite_M << ")"
-                << " Rd_W=" << (int)Rd_in_W << "(RegWr=" << (int)RegWrite_W << ")\n";
+                << " Rd_W=" << (int)Rd_in_W << "(RegWr=" << (int)RegWrite_W << ")"
+                << " | BranchE=" << (int)BranchE << " PCSrc_AND=" << (int)PCSrc_AND
+                << " PCSrc_W=" << (int)PCSrc_W << "\n";
             });
 
         // 1. SegmentationFault
@@ -570,45 +650,66 @@ namespace cpu_tlp {
             return out;
         }
 
-        // 5. BRANCHING
-        if (BranchE) {
-            if (!branchActive) {
-                branchActive = true;
-                branchCycles = 0;
-                log_line("  [HazardUnit] Branch detected, starting handling\n");
-            }
+        // 5. BRANCHING - VERSIÓN FINAL CORREGIDA
+        // Detectar branch en DECODE con BranchE
+        if (BranchE && !branchActive) {
+            branchActive = true;
+            branchCycles = 0;
+            branchWaitingForW = false;
+            log_line("  [HazardUnit] Branch detected in Decode, starting handling\n");
         }
 
         if (branchActive) {
             branchCycles++;
 
-            if (PCSrc_AND) {
-                if (branchCycles <= 4) {
+            if (branchCycles == 1) {
+                // Ciclo 1: Branch en D → StallF, FlushD siempre
+                out.StallF = true;
+                out.FlushD = true;
+                log_line("  [HazardUnit] Branch cycle 1 (in D) -> StallF, FlushD\n");
+            }
+            else if (branchCycles == 2) {
+                // Ciclo 2: Branch en E, evaluar PCSrc_AND
+                if (PCSrc_AND) {
+                    // Branch TOMADO: continuar con StallF + FlushD
                     out.StallF = true;
                     out.FlushD = true;
+                    branchWaitingForW = true;
+                    log_line("  [HazardUnit] Branch cycle 2 (in E) TAKEN -> StallF, FlushD (continuing)\n");
+                }
+                else {
+                    // Branch NO TOMADO: terminar inmediatamente
+                    branchActive = false;
+                    log_line("  [HazardUnit] Branch cycle 2 (in E) NOT TAKEN -> end\n");
+                }
+            }
+            else if (branchWaitingForW) {
+                // Ciclos 3+: Branch avanzando hacia W
+                if (PCSrc_W) {
+                    // Branch llegó a W - PERMITIR que PC se actualice (NO StallF)
+                    // pero mantener FlushD para limpiar la instrucción incorrecta
+                    out.FlushD = true;  // ← Solo FlushD, sin StallF
+                    branchWaitingForW = false;
+                    branchActive = false;  // ← Terminar aquí mismo
                     log_build_and_print([&](std::ostringstream& oss) {
-                        oss << "  [HazardUnit] Branch taken (cycle "
-                            << branchCycles << "/4) -> StallF, FlushD\n";
+                        oss << "  [HazardUnit] Branch in W (cycle " << branchCycles
+                            << ") PC updating NOW -> FlushD only\n";
                         });
                 }
                 else {
-                    branchActive = false;
-                    log_line("  [HazardUnit] Branch taken complete\n");
+                    // Aún esperando que llegue a W
+                    out.StallF = true;
+                    out.FlushD = true;
+                    log_build_and_print([&](std::ostringstream& oss) {
+                        oss << "  [HazardUnit] Branch cycle " << branchCycles
+                            << " (waiting for W) -> StallF, FlushD\n";
+                        });
                 }
             }
             else {
-                if (branchCycles <= 1) {
-                    out.StallF = true;
-                    out.FlushD = true;
-                    log_build_and_print([&](std::ostringstream& oss) {
-                        oss << "  [HazardUnit] Branch not taken (cycle "
-                            << branchCycles << "/1) -> StallF, FlushD\n";
-                        });
-                }
-                else {
-                    branchActive = false;
-                    log_line("  [HazardUnit] Branch not taken complete\n");
-                }
+                // Ya no debería llegar aquí
+                branchActive = false;
+                log_line("  [HazardUnit] Branch cleanup\n");
             }
         }
 
@@ -964,10 +1065,9 @@ namespace cpu_tlp {
         stageDecode();
         stageFetch();
 
-        // ============ CRÍTICO: TOMAR SNAPSHOT ANTES DEL LATCH ============
         updateInstructionTracking();
 
-        // Actualizar flipflops DESPUÉS de la visualización
+        // Actualizar flipflops
         if (!m_hazards.StallW) {
             MEM_WB = MEM_WB_next;
         }
@@ -976,9 +1076,16 @@ namespace cpu_tlp {
         }
         if (!m_hazards.StallE) {
             if (m_hazards.FlushE) {
+                // CRÍTICO: Preservar los flags durante FLUSH
+                uint8_t preserved_flags = ID_EX.Flags_in;
+
                 ID_EX = {};
-                ID_EX.ALUControl_D = 0x22;
+                ID_EX.ALUControl_D = 0x22;  // NOTHING
+                ID_EX.FlagsUpd_D = 0;       // ← NO actualizar flags
                 ID_EX.Instr_D = FLUSH_INSTRUCTION;
+
+                // Restaurar los flags preservados
+                ID_EX.Flags_in = preserved_flags;
             }
             else {
                 ID_EX = ID_EX_next;
@@ -1086,10 +1193,12 @@ namespace cpu_tlp {
 
         m_hazards = m_hazardUnit.detect(
             ins_ready, c_request, c_ready, SegmentationFault, PCSrc_AND,
+            MEM_WB.PCSrc_M,  // ← NUEVO: PCSrc_W
             Rd_in_D, Rn_in, Rm_in,
             ID_EX.Rd_in_D, EX_MEM.Rd_in_E, MEM_WB.Rd_in_M,
             ID_EX.RegWrite_D, EX_MEM.RegWrite_E, MEM_WB.RegWrite_M,
-            ctrlSignals.BranchE
+            ctrlSignals.BranchE,
+            ID_EX.BranchOp_D
         );
 
         // Hazards aplicados (atómico)
@@ -1151,6 +1260,20 @@ namespace cpu_tlp {
 
         // AND de branching
         PCSrc_AND = ID_EX.PCSrc_D && CondExE;
+
+        // NUEVO: Print de debug para flags
+        if (ID_EX.BranchOp_D != 0 || ID_EX.FlagsUpd_D) {
+            log_build_and_print([&](std::ostringstream& oss) {
+                bool N = (Flags_prime & 0x8) != 0;
+                bool Z = (Flags_prime & 0x4) != 0;
+                bool C = (Flags_prime & 0x2) != 0;
+                bool V = (Flags_prime & 0x1) != 0;
+                oss << "  [stageExecute] Flags_prime=0x" << std::hex << (int)Flags_prime
+                    << " (N=" << N << " Z=" << Z << " C=" << C << " V=" << V << ")"
+                    << " BranchOp=" << std::dec << (int)ID_EX.BranchOp_D
+                    << " CondExE=" << CondExE << " PCSrc_AND=" << PCSrc_AND << "\n";
+                });
+        }
 
         // Preparar next flipflop
         EX_MEM_next.RegWrite_E = ID_EX.RegWrite_D;
@@ -1215,6 +1338,8 @@ namespace cpu_tlp {
         // Mux selector de PC
         PC_prime = pcsrc ? aluOutW : PCPlus8_F;
     }
+
+    // ============================================================================
 
     void PE0Component::updateInstructionTracking() {
         // Snapshot *después* del latch de este ciclo:
