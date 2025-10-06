@@ -27,18 +27,16 @@
 CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindow* win)
     : State(sm, win) {
 
-    // 1) Construir datos compartidos
-    m_instructionMemoryData = std::make_shared<cpu_tlp::InstructionMemorySharedData>();
+    // 1) Construir UNA SOLA estructura de datos compartidos
     m_cpuSystemData = std::make_shared<cpu_tlp::CPUSystemSharedData>();
 
-
-    // 2) Lanzar InstructionMemory (su propio hilo)
+    // 2) Lanzar InstructionMemory con la MISMA estructura
     m_instructionMemory = std::make_unique<cpu_tlp::InstructionMemoryComponent>();
-    if (!m_instructionMemory->initialize(m_instructionMemoryData)) {
+    if (!m_instructionMemory->initialize(m_cpuSystemData)) {  // CAMBIO: Usa m_cpuSystemData
         std::cerr << "[CpuTLP] InstructionMemory init failed\n";
     }
 
-    // 3) Crear PE0 y lanzarlo (su propio hilo)
+    // 3) Crear PE0 con la MISMA estructura
     m_pe0 = std::make_unique<cpu_tlp::PE0Component>(0);
     if (!m_pe0->initialize(m_cpuSystemData)) {
         std::cerr << "[CpuTLP] PE0 init failed\n";
@@ -53,13 +51,6 @@ CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindo
 
     // 5) Construir vistas (todas vivas)
     buildAllViews();
-
-    // Copiar las conexiones de instrucciones al nuevo sistema
-    for (int i = 0; i < 4; ++i) {
-        m_cpuSystemData->instruction_connections[i].PC_F = 0;
-        m_cpuSystemData->instruction_connections[i].InstrF = 0;
-        m_cpuSystemData->instruction_connections[i].INS_READY = false;
-    }
 }
 
 CpuTLPSharedCacheState::~CpuTLPSharedCacheState() {
@@ -127,6 +118,16 @@ void CpuTLPSharedCacheState::handleEvent(sf::Event& e) {
 }
 
 void CpuTLPSharedCacheState::update(float dt) {
+    // NUEVO: Actualizar PE0RegView con los valores del snapshot
+    if (auto* pe0RegView = dynamic_cast<PE0RegView*>(getView(Panel::PE0Reg))) {
+        auto& snapshot = m_cpuSystemData->pe_registers[0];
+        for (int i = 0; i < 12; ++i) {
+            uint64_t value = snapshot.registers[i].load(std::memory_order_acquire);
+            pe0RegView->setRegValueByIndex_(i, value);
+        }
+    }
+
+    // Actualizar otras vistas
     for (auto& v : m_views) {
         if (v) v->update(dt);
     }
@@ -245,8 +246,52 @@ void CpuTLPSharedCacheState::renderBackground() {
 }
 
 // ---- Wrappers de control ----
-void CpuTLPSharedCacheState::resetPE0() { if (m_pe0) m_pe0->reset(); }
-void CpuTLPSharedCacheState::stepPE0() { if (m_pe0) m_pe0->step(); }
-void CpuTLPSharedCacheState::stepUntilPE0(int n) { if (m_pe0) m_pe0->stepUntil(n); }
-void CpuTLPSharedCacheState::stepIndefinitelyPE0() { if (m_pe0) m_pe0->stepIndefinitely(); }
-void CpuTLPSharedCacheState::stopPE0() { if (m_pe0) m_pe0->stopExecution(); }
+void CpuTLPSharedCacheState::resetPE0() {
+    std::cout << "[CpuTLPSharedCacheState] resetPE0() called\n";
+    if (m_pe0) {
+        m_pe0->reset();
+    }
+    else {
+        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
+    }
+}
+
+void CpuTLPSharedCacheState::stepPE0() {
+    std::cout << "[CpuTLPSharedCacheState] stepPE0() called\n";
+    if (m_pe0) {
+        m_pe0->step();
+    }
+    else {
+        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
+    }
+}
+
+void CpuTLPSharedCacheState::stepUntilPE0(int n) {
+    std::cout << "[CpuTLPSharedCacheState] stepUntilPE0(" << n << ") called\n";
+    if (m_pe0) {
+        m_pe0->stepUntil(n);
+    }
+    else {
+        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
+    }
+}
+
+void CpuTLPSharedCacheState::stepIndefinitelyPE0() {
+    std::cout << "[CpuTLPSharedCacheState] stepIndefinitelyPE0() called\n";
+    if (m_pe0) {
+        m_pe0->stepIndefinitely();
+    }
+    else {
+        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
+    }
+}
+
+void CpuTLPSharedCacheState::stopPE0() {
+    std::cout << "[CpuTLPSharedCacheState] stopPE0() called\n";
+    if (m_pe0) {
+        m_pe0->stopExecution();
+    }
+    else {
+        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
+    }
+}

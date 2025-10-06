@@ -85,7 +85,6 @@ add_executable("${CMAKE_PROJECT_NAME}" ${MY_SOURCES}
 "include/programs/cpu_tlp_shared_cache/widgets/RamTable.h"
 "src/programs/cpu_tlp_shared_cache/widgets/RamTable.cpp"
 "include/programs/cpu_tlp_shared_cache/components/SharedData.h"
-"src/programs/cpu_tlp_shared_cache/components/InstructionMemoryComponent.cpp"
 "include/programs/cpu_tlp_shared_cache/widgets/RegTable.h"
 "src/programs/cpu_tlp_shared_cache/widgets/RegTable.cpp"
 "include/programs/cpu_tlp_shared_cache/views/PE0RegView.h"

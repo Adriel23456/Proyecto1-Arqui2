@@ -9,16 +9,15 @@
   },
   "ExpandedNodes": [
     "",
-    "\\include",
     "\\include\\programs",
     "\\include\\programs\\cpu_tlp_shared_cache",
-    "\\include\\programs\\cpu_tlp_shared_cache\\views",
+    "\\resources\\Assets",
+    "\\resources\\Assets\\CPU_TLP",
     "\\src",
     "\\src\\programs",
     "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\views",
-    "\\src\\programs\\cpu_tlp_shared_cache\\widgets"
+    "\\src\\programs\\cpu_tlp_shared_cache\\components"
   ],
-  "SelectedNode": "\\CMakeLists.txt",
+  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.cpp",
   "PreviewInSolutionExplorer": false
 }

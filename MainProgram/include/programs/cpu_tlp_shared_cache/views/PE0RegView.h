@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 #include "programs/cpu_tlp_shared_cache/views/ICpuTLPView.h"
 #include "programs/cpu_tlp_shared_cache/widgets/RegTable.h"
 #include <cstdint>
 #include <string>
 
 class CpuTLPControlAPI; // API central autorizado
+class CpuTLPSharedCacheState; // AGREGAR ESTA DECLARACION
 
 class PE0RegView : public ICpuTLPView {
 public:
@@ -14,6 +15,7 @@ public:
 private:
     // Solo el API puede invocar estos setters
     friend class CpuTLPControlAPI;
+    friend class CpuTLPSharedCacheState;
 
     // Wrappers privados hacia los setters privados del RegTable
     void setRegValueByIndex_(int idx, uint64_t v) { m_table.setValueByIndex_(idx, v); }

@@ -4,22 +4,17 @@
 #include <memory>
 #include <cstdint>
 #include <array>
+#include <atomic>
+#include <functional>
 
 namespace cpu_tlp {
-
-    // Forward declarations
-    class PipelineStage;
-    class HazardUnit;
 
     class PE0Component {
     public:
         PE0Component(int pe_id = 0);
         ~PE0Component();
 
-        // Inicializa el componente y comienza la ejecución asíncrona
         bool initialize(std::shared_ptr<CPUSystemSharedData> sharedData);
-
-        // Detiene el componente y espera a que termine el hilo
         void shutdown();
 
         // Comandos de control
@@ -29,162 +24,184 @@ namespace cpu_tlp {
         void stopExecution();
         void reset();
 
-        // Verifica si el componente está corriendo
         bool isRunning() const;
 
     private:
-        // Función principal del hilo de ejecución
         void threadMain();
-
-        // Ejecuta un ciclo del pipeline
         void executeCycle();
 
-        // Estructura del pipeline
-        struct Pipeline {
-            // Registros entre etapas (FlipFlops)
-            struct IFIDReg {
-                uint64_t PC;
-                uint64_t Instruction;
-                bool valid;
-            };
+        // ============ ESTRUCTURAS INTERNAS ============
 
-            struct IDEXReg {
-                uint64_t PC;
-                uint64_t A;
-                uint64_t B;
-                uint64_t Imm;
-                uint8_t Rd;
-                uint8_t ALUControl;
-                uint8_t MemOp;
-                bool RegWrite;
-                bool MemWrite;
-                bool Branch;
-                uint8_t BranchOp;
-                bool ImmOp;
-                bool FlagsUpd;
-                bool valid;
-            };
-
-            struct EXMEMReg {
-                uint64_t ALUResult;
-                uint64_t B;
-                uint8_t Rd;
-                uint8_t MemOp;
-                bool RegWrite;
-                bool MemWrite;
-                bool PCSrc;
-                bool valid;
-            };
-
-            struct MEMWBReg {
-                uint64_t ALUResult;
-                uint64_t MemData;
-                uint8_t Rd;
-                bool RegWrite;
-                bool MemToReg;
-                bool PCSrc;
-                bool valid;
-            };
-
-            // Registros de pipeline
-            IFIDReg IF_ID, next_IF_ID;
-            IDEXReg ID_EX, next_ID_EX;
-            EXMEMReg EX_MEM, next_EX_MEM;
-            MEMWBReg MEM_WB, next_MEM_WB;
+        // FlipFlops entre etapas
+        struct FetchDecodeReg {
+            uint64_t Instr_F;
+            uint64_t PC_F;
         };
 
-        // Etapas del pipeline
+        struct DecodeExecuteReg {
+            uint8_t RegWrite_D;
+            uint8_t MemOp_D;
+            uint8_t C_WE_D;
+            uint8_t C_REQUEST_D;
+            uint8_t C_ISB_D;
+            uint8_t PCSrc_D;
+            uint8_t FlagsUpd_D;
+            uint8_t ALUControl_D;
+            uint8_t BranchOp_D;
+            uint8_t Flags_in;  // Flags' desde Execute
+            uint64_t SrcA_D;
+            uint64_t SrcB_D;
+            uint64_t RD_Rm_out;
+            uint8_t Rd_in_D;
+        };
+
+        struct ExecuteMemoryReg {
+            uint8_t RegWrite_E;
+            uint8_t MemOp_E;
+            uint8_t C_WE_E;
+            uint8_t C_REQUEST_E;
+            uint8_t C_ISB_E;
+            uint8_t PCSrc_AND;
+            uint64_t ALUResult_E;
+            uint64_t RD_Rm_Special_E;
+            uint8_t Rd_in_E;
+        };
+
+        struct MemoryWriteBackReg {
+            uint8_t RegWrite_M;
+            uint8_t PCSrc_M;
+            uint64_t ALUOutM_O;
+            uint8_t Rd_in_M;
+        };
+
+        // ============ UNIDADES FUNCIONALES ============
+
+        class RegisterFile {
+        public:
+            RegisterFile();
+            void reset();
+            uint64_t read(uint8_t addr) const;
+            void write(uint8_t addr, uint64_t value, bool we);
+            uint64_t getUpper() const { return regs[10]; }
+            uint64_t getLower() const { return regs[11]; }
+            void setPEID(int pe_id) { regs[9] = pe_id; }
+            std::function<void(uint8_t addr, uint64_t value)> onRegisterWrite;
+        private:
+            std::array<uint64_t, 12> regs;
+        };
+
+        class ALU {
+        public:
+            struct Result {
+                uint64_t value;
+                uint8_t flags; // NZCV
+            };
+            Result execute(uint8_t control, uint64_t A, uint64_t B, uint8_t flagsIn);
+        };
+
+        class ControlUnit {
+        public:
+            struct Signals {
+                uint8_t RegWrite_D;
+                uint8_t MemOp_D;
+                uint8_t C_WE_D;
+                uint8_t C_REQUEST_D;
+                uint8_t C_ISB_D;
+                uint8_t PCSrc_D;
+                uint8_t FlagsUpd_D;
+                uint8_t ALUControl_D;
+                uint8_t BranchOp_D;
+                uint8_t BranchE;
+                uint8_t ImmOp;
+                uint8_t DataType;
+            };
+            Signals decode(uint8_t opcode);
+        };
+
+        class HazardUnit {
+        public:
+            struct Outputs {
+                bool StallF, StallD, FlushD, StallE, FlushE, StallM, StallW;
+            };
+
+            Outputs detect(
+                bool INS_READY,
+                bool C_REQUEST_M, bool C_READY,
+                bool SegmentationFault,
+                bool PCSrc_AND,
+                uint8_t Rd_in_D, uint8_t Rn_in, uint8_t Rm_in,
+                uint8_t Rd_in_E, uint8_t Rd_in_M, uint8_t Rd_in_W,
+                bool RegWrite_E, bool RegWrite_M, bool RegWrite_W,
+                bool BranchE
+            );
+        private:
+            int branchCycles = 0;
+            bool branchActive = false;
+        };
+
+        // ============ ETAPAS DEL PIPELINE ============
         void stageFetch();
         void stageDecode();
         void stageExecute();
         void stageMemory();
         void stageWriteBack();
 
-        // Unidades funcionales
-        class ALU {
-        public:
-            uint64_t execute(uint8_t control, uint64_t A, uint64_t B, uint8_t& flags);
-        };
+        // ============ HELPERS ============
+        uint64_t extendImmediate(uint32_t imm, bool dataType);
+        bool evaluateBranchCondition(uint8_t branchOp, uint8_t flags);
 
-        class ControlUnit {
-        public:
-            void decode(uint8_t opcode, uint8_t special);
-
-            // Señales de control
-            bool RegWriteS, RegWriteR;
-            uint8_t MemOp;
-            bool MemWriteG, MemWriteD, MemWriteV, MemWriteP;
-            bool MemByte;
-            bool PCSrc;
-            uint8_t ALUSrc;
-            uint8_t PrintEn;
-            bool ComS;
-            bool LogOut;
-            bool BranchE;
-            bool FlagsUpd;
-            uint8_t BranchOp;
-            bool ImmediateOp;
-            uint8_t RegisterInB;
-            bool RegisterInA;
-        };
-
-        // Register File de 12 registros
-        class RegisterFile {
-        public:
-            RegisterFile();
-            void reset();
-            uint64_t read(uint8_t addr);
-            void write(uint8_t addr, uint64_t value, bool we);
-
-        private:
-            std::array<uint64_t, 12> regs;
-            static constexpr uint64_t INITIAL_LOWER = 0xFFFFFFFFFFFFFFFFULL;
-        };
-
-        // Hazard Unit
-        class HazardUnit {
-        public:
-            void checkHazards(const Pipeline& pipeline);
-
-            // Señales de control de hazards
-            bool StallF, StallD, StallE, StallM, StallW;
-            bool FlushD, FlushE;
-
-        private:
-            bool detectRAW(uint8_t rs, uint8_t rt, const Pipeline& pipeline);
-            bool detectBranch(const Pipeline& pipeline);
-            bool detectCacheStall(const Pipeline& pipeline);
-        };
-
-    private:
-        // Miembros de datos
+        // ============ MIEMBROS DE DATOS ============
         int m_pe_id;
         std::shared_ptr<CPUSystemSharedData> m_sharedData;
         std::unique_ptr<std::thread> m_executionThread;
 
-        // Estado del pipeline
-        Pipeline m_pipeline;
+        // Estado del CPU
+        uint64_t PC_F;
+        uint64_t PCPlus8_F;
 
-        // Unidades funcionales
+        // Registros de pipeline
+        FetchDecodeReg IF_ID, IF_ID_next;
+        DecodeExecuteReg ID_EX, ID_EX_next;
+        ExecuteMemoryReg EX_MEM, EX_MEM_next;
+        MemoryWriteBackReg MEM_WB, MEM_WB_next;
+
+        // Señales intermedias (Decode)
+        uint64_t InstrD;
+        uint64_t PC_in;
+        uint8_t Op_in, Rn_in, Rm_in, Rd_in_D;
+        uint32_t Imm_in;
+        uint64_t RD_Rn_out, RD_Rm_out, UPPER_out, LOWER_out;
+        uint64_t Imm_ext_in;
+        bool SegmentationFault;
+        uint64_t SrcA_D, SrcB_D;
+        ControlUnit::Signals ctrlSignals;
+
+        // Señales intermedias (Execute)
+        uint8_t ALUFlagsOut;
+        uint64_t ALUResult_E;
+        uint8_t Flags_prime;  // Flags'
+        bool CondExE;
+        bool PCSrc_AND;
+
+        // Señales intermedias (Memory)
+        uint64_t ALUOutM_O;
+
+        // Señales intermedias (WriteBack)
+        uint64_t PC_prime;
+
+        // Unidades
+        RegisterFile m_registerFile;
         ALU m_alu;
         ControlUnit m_controlUnit;
-        RegisterFile m_registerFile;
         HazardUnit m_hazardUnit;
-
-        // Program Counter
-        uint64_t m_PC;
-        uint64_t m_nextPC;
-
-        // Flags (NZCV)
-        uint8_t m_flags;
+        HazardUnit::Outputs m_hazards;
 
         // Estado interno
-        bool m_isRunning;
+        std::atomic<bool> m_isRunning;
         bool m_segmentationFault;
 
         // Constantes
         static constexpr uint64_t NOP_INSTRUCTION = 0x4D00000000000000ULL;
-        static constexpr int MAX_CYCLES_PER_STEP = 1000000;
     };
 
 } // namespace cpu_tlp

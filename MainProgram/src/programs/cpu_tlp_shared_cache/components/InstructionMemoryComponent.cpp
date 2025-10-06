@@ -20,7 +20,8 @@ namespace cpu_tlp {
         shutdown();
     }
 
-    bool InstructionMemoryComponent::initialize(std::shared_ptr<InstructionMemorySharedData> sharedData) {
+    // En initialize()
+    bool InstructionMemoryComponent::initialize(std::shared_ptr<CPUSystemSharedData> sharedData) {
         if (m_isRunning) {
             std::cerr << "[InstructionMemory] Component already running!" << std::endl;
             return false;
@@ -28,32 +29,31 @@ namespace cpu_tlp {
 
         m_sharedData = sharedData;
 
-        // Cargar el archivo de memoria de instrucciones
         if (!loadInstructionMemory()) {
             std::cerr << "[InstructionMemory] Failed to load instruction memory file" << std::endl;
             return false;
         }
 
-        // Iniciar el hilo de ejecución
         m_isRunning = true;
-        m_sharedData->should_stop = false;
+        // CAMBIO: Usa system_should_stop en lugar de should_stop
+        m_sharedData->system_should_stop = false;
         m_executionThread = std::make_unique<std::thread>(&InstructionMemoryComponent::threadMain, this);
 
         std::cout << "[InstructionMemory] Component initialized successfully" << std::endl;
         return true;
     }
 
+    // En shutdown()
     void InstructionMemoryComponent::shutdown() {
         if (!m_isRunning) return;
 
         std::cout << "[InstructionMemory] Shutting down..." << std::endl;
 
-        // Señalar al hilo que debe detenerse
         if (m_sharedData) {
-            m_sharedData->should_stop = true;
+            // CAMBIO: Usa system_should_stop
+            m_sharedData->system_should_stop = true;
         }
 
-        // Esperar a que termine el hilo
         if (m_executionThread && m_executionThread->joinable()) {
             m_executionThread->join();
         }
@@ -93,22 +93,19 @@ namespace cpu_tlp {
         return true;
     }
 
+    // En reloadInstructionMemory()
     bool InstructionMemoryComponent::reloadInstructionMemory() {
         std::cout << "[InstructionMemory] Reloading instruction memory..." << std::endl;
 
-        // Pausar temporalmente el procesamiento
         pauseProcessing();
-
-        // Esperar un poco para asegurar que no hay lecturas activas
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-        // Intentar recargar el archivo
         bool success = loadInstructionMemory();
 
         if (success) {
-            // Resetear los estados de todos los PEs para forzar recarga
             for (int i = 0; i < 4; ++i) {
-                auto& connection = m_sharedData->pe_connections[i];
+                // CAMBIO: Usa instruction_connections en lugar de pe_connections
+                auto& connection = m_sharedData->instruction_connections[i];
                 connection.PC_F.store(0x0000000000000000ULL, std::memory_order_release);
                 connection.INS_READY.store(false, std::memory_order_release);
             }
@@ -118,9 +115,7 @@ namespace cpu_tlp {
             std::cerr << "[InstructionMemory] Reload failed" << std::endl;
         }
 
-        // Reanudar el procesamiento
         resumeProcessing();
-
         return success;
     }
 
@@ -155,68 +150,53 @@ namespace cpu_tlp {
         return bytesToUint64LittleEndian(instructionBytes);
     }
 
+    // En processPERequest()
     void InstructionMemoryComponent::processPERequest(int peIndex) {
-        auto& connection = m_sharedData->pe_connections[peIndex];
+        // CAMBIO: Usa instruction_connections en lugar de pe_connections
+        auto& connection = m_sharedData->instruction_connections[peIndex];
 
-        // Leer el PC_F actual (este es escrito por el PE)
         uint64_t currentPC = connection.PC_F.load(std::memory_order_acquire);
 
-        // Variable estática por PE para detectar cambios en PC_F
         static std::array<uint64_t, 4> lastPC = { 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
                                                   0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL };
 
-        // Detectar si PC_F cambió
         if (currentPC != lastPC[peIndex]) {
-            // PC cambió, indicar que la instrucción no está lista
             connection.INS_READY.store(false, std::memory_order_release);
-
-            // Simular latencia de lectura de memoria (opcional, puedes ajustar o eliminar)
             std::this_thread::sleep_for(std::chrono::microseconds(10));
 
-            // Leer la instrucción desde la memoria
             uint64_t instruction = readInstructionFromFile(currentPC);
 
-            // Escribir la instrucción en InstrF
             connection.InstrF.store(instruction, std::memory_order_release);
-
-            // Indicar que la instrucción está lista
             connection.INS_READY.store(true, std::memory_order_release);
 
-            // Actualizar el último PC procesado
             lastPC[peIndex] = currentPC;
 
-            // Debug output (puedes comentar esto en producción)
             std::cout << "[InstructionMemory] PE" << peIndex
                 << " - PC: 0x" << std::hex << currentPC
                 << " - Instruction: 0x" << instruction << std::dec << std::endl;
         }
     }
 
+    // En threadMain()
     void InstructionMemoryComponent::threadMain() {
         std::cout << "[InstructionMemory] Thread started" << std::endl;
 
-        // Marcar el componente como listo
-        m_sharedData->component_ready.store(true, std::memory_order_release);
-
-        // Procesar inicialmente todas las direcciones 0x0000000000000000
+        // Procesar inicialmente todas las direcciones 0x0
         for (int i = 0; i < 4; ++i) {
             processPERequest(i);
         }
 
-        // Bucle principal del componente
-        while (!m_sharedData->should_stop.load(std::memory_order_acquire)) {
-            // Si el procesamiento está pausado, esperar
+        // CAMBIO: Usa system_should_stop
+        while (!m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
             if (m_processingPaused.load(std::memory_order_acquire)) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 continue;
             }
 
-            // Procesar las solicitudes de cada PE
             for (int i = 0; i < 4; ++i) {
                 processPERequest(i);
             }
 
-            // Pequeña pausa para no sobrecargar la CPU
             std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
 
