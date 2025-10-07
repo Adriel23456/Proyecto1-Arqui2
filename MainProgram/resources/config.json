@@ -9,5 +9,5 @@
         "width": 1600
     },
     "screenMode": "window",
-    "vsync": false
+    "vsync": true
 }

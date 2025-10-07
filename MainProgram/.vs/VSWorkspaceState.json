@@ -9,7 +9,8 @@
   },
   "ExpandedNodes": [
     "",
-    "\\out\\build"
+    "\\out\\build",
+    "\\src\\programs\\cpu_tlp_shared_cache"
   ],
   "PreviewInSolutionExplorer": false
 }
