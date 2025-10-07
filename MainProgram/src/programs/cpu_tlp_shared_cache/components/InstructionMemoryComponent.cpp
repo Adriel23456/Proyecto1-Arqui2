@@ -94,7 +94,7 @@ namespace cpu_tlp {
         std::cout << "[InstructionMemory] Reloading instruction memory..." << std::endl;
 
         pauseProcessing();
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         bool success = loadInstructionMemory();
 
@@ -147,10 +147,6 @@ namespace cpu_tlp {
                                                   0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL };
 
         if (currentPC != lastPC[peIndex]) {
-            log_build_and_print([&](std::ostringstream& oss) {
-                oss << "  [InstMem] PE" << peIndex << " DETECTED PC change: "
-                    << std::hex << lastPC[peIndex] << " -> " << currentPC << std::dec << "\n";
-                });
 
             connection.INS_READY.store(false, std::memory_order_release);
 
@@ -163,12 +159,6 @@ namespace cpu_tlp {
             connection.INS_READY.store(true, std::memory_order_release);
 
             lastPC[peIndex] = currentPC;
-
-            log_build_and_print([&](std::ostringstream& oss) {
-                oss << "[InstructionMemory] PE" << peIndex
-                    << " - PC: 0x" << std::hex << currentPC
-                    << " - Instruction: 0x" << instruction << std::dec << "\n";
-                });
         }
     }
 
@@ -182,7 +172,7 @@ namespace cpu_tlp {
 
         while (!m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
             if (m_processingPaused.load(std::memory_order_acquire)) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 continue;
             }
 

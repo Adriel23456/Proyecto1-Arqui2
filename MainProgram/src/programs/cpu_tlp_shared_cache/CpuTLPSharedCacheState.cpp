@@ -386,28 +386,28 @@ void CpuTLPSharedCacheState::render() {
         ImGui::Dummy(ImVec2(1, 10));
         if (sidebarButton("PE0 Reg", (m_selected == Panel::PE0Reg), btnW, BTN_H)) m_selected = Panel::PE0Reg;     // NUEVO
         ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE0 Mem", (m_selected == Panel::PE0Mem), btnW, BTN_H)) m_selected = Panel::PE0Mem;
+        if (sidebarButton("PE0 Cache", (m_selected == Panel::PE0Mem), btnW, BTN_H)) m_selected = Panel::PE0Mem;
         ImGui::Dummy(ImVec2(1, 10));
 
         if (sidebarButton("PE1 CPU", (m_selected == Panel::PE1CPU), btnW, BTN_H)) m_selected = Panel::PE1CPU;
         ImGui::Dummy(ImVec2(1, 10));
         if (sidebarButton("PE1 Reg", (m_selected == Panel::PE1Reg), btnW, BTN_H)) m_selected = Panel::PE1Reg;     // NUEVO
         ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE1 Mem", (m_selected == Panel::PE1Mem), btnW, BTN_H)) m_selected = Panel::PE1Mem;
+        if (sidebarButton("PE1 Cache", (m_selected == Panel::PE1Mem), btnW, BTN_H)) m_selected = Panel::PE1Mem;
         ImGui::Dummy(ImVec2(1, 10));
 
         if (sidebarButton("PE2 CPU", (m_selected == Panel::PE2CPU), btnW, BTN_H)) m_selected = Panel::PE2CPU;
         ImGui::Dummy(ImVec2(1, 10));
         if (sidebarButton("PE2 Reg", (m_selected == Panel::PE2Reg), btnW, BTN_H)) m_selected = Panel::PE2Reg;     // NUEVO
         ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE2 Mem", (m_selected == Panel::PE2Mem), btnW, BTN_H)) m_selected = Panel::PE2Mem;
+        if (sidebarButton("PE2 Cache", (m_selected == Panel::PE2Mem), btnW, BTN_H)) m_selected = Panel::PE2Mem;
         ImGui::Dummy(ImVec2(1, 10));
 
         if (sidebarButton("PE3 CPU", (m_selected == Panel::PE3CPU), btnW, BTN_H)) m_selected = Panel::PE3CPU;
         ImGui::Dummy(ImVec2(1, 10));
         if (sidebarButton("PE3 Reg", (m_selected == Panel::PE3Reg), btnW, BTN_H)) m_selected = Panel::PE3Reg;     // NUEVO
         ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE3 Mem", (m_selected == Panel::PE3Mem), btnW, BTN_H)) m_selected = Panel::PE3Mem;
+        if (sidebarButton("PE3 Cache", (m_selected == Panel::PE3Mem), btnW, BTN_H)) m_selected = Panel::PE3Mem;
         ImGui::Dummy(ImVec2(1, 10));
 
         if (sidebarButton("RAM", (m_selected == Panel::RAM), btnW, BTN_H)) m_selected = Panel::RAM;
@@ -488,7 +488,6 @@ void CpuTLPSharedCacheState::renderBackground() {
 
 // ---- Wrappers de control PE0 ----
 void CpuTLPSharedCacheState::resetPE0() {
-    std::cout << "[CpuTLPSharedCacheState] resetPE0() called\n";
     if (m_pe0) {
         m_pe0->reset();
     }
@@ -498,7 +497,6 @@ void CpuTLPSharedCacheState::resetPE0() {
 }
 
 void CpuTLPSharedCacheState::stepPE0() {
-    std::cout << "[CpuTLPSharedCacheState] stepPE0() called\n";
     if (m_pe0) {
         m_pe0->step();
     }
@@ -508,7 +506,6 @@ void CpuTLPSharedCacheState::stepPE0() {
 }
 
 void CpuTLPSharedCacheState::stepUntilPE0(int n) {
-    std::cout << "[CpuTLPSharedCacheState] stepUntilPE0(" << n << ") called\n";
     if (m_pe0) {
         m_pe0->stepUntil(n);
     }
@@ -518,7 +515,6 @@ void CpuTLPSharedCacheState::stepUntilPE0(int n) {
 }
 
 void CpuTLPSharedCacheState::stepIndefinitelyPE0() {
-    std::cout << "[CpuTLPSharedCacheState] stepIndefinitelyPE0() called\n";
     if (m_pe0) {
         m_pe0->stepIndefinitely();
     }
@@ -528,7 +524,6 @@ void CpuTLPSharedCacheState::stepIndefinitelyPE0() {
 }
 
 void CpuTLPSharedCacheState::stopPE0() {
-    std::cout << "[CpuTLPSharedCacheState] stopPE0() called\n";
     if (m_pe0) {
         m_pe0->stopExecution();
     }
@@ -539,7 +534,6 @@ void CpuTLPSharedCacheState::stopPE0() {
 
 // ---- Wrappers de control PE1 ----
 void CpuTLPSharedCacheState::resetPE1() {
-    std::cout << "[CpuTLPSharedCacheState] resetPE1() called\n";
     if (m_pe1) {
         m_pe1->reset();
     }
@@ -549,7 +543,6 @@ void CpuTLPSharedCacheState::resetPE1() {
 }
 
 void CpuTLPSharedCacheState::stepPE1() {
-    std::cout << "[CpuTLPSharedCacheState] stepPE1() called\n";
     if (m_pe1) {
         m_pe1->step();
     }
@@ -559,7 +552,6 @@ void CpuTLPSharedCacheState::stepPE1() {
 }
 
 void CpuTLPSharedCacheState::stepUntilPE1(int n) {
-    std::cout << "[CpuTLPSharedCacheState] stepUntilPE1(" << n << ") called\n";
     if (m_pe1) {
         m_pe1->stepUntil(n);
     }
@@ -569,7 +561,6 @@ void CpuTLPSharedCacheState::stepUntilPE1(int n) {
 }
 
 void CpuTLPSharedCacheState::stepIndefinitelyPE1() {
-    std::cout << "[CpuTLPSharedCacheState] stepIndefinitelyPE1() called\n";
     if (m_pe1) {
         m_pe1->stepIndefinitely();
     }
@@ -579,7 +570,6 @@ void CpuTLPSharedCacheState::stepIndefinitelyPE1() {
 }
 
 void CpuTLPSharedCacheState::stopPE1() {
-    std::cout << "[CpuTLPSharedCacheState] stopPE1() called\n";
     if (m_pe1) {
         m_pe1->stopExecution();
     }
@@ -590,7 +580,6 @@ void CpuTLPSharedCacheState::stopPE1() {
 
 // ---- Wrappers de control PE2 ----
 void CpuTLPSharedCacheState::resetPE2() {
-    std::cout << "[CpuTLPSharedCacheState] resetPE2() called\n";
     if (m_pe2) {
         m_pe2->reset();
     }
@@ -600,7 +589,6 @@ void CpuTLPSharedCacheState::resetPE2() {
 }
 
 void CpuTLPSharedCacheState::stepPE2() {
-    std::cout << "[CpuTLPSharedCacheState] stepPE2() called\n";
     if (m_pe2) {
         m_pe2->step();
     }
@@ -610,7 +598,6 @@ void CpuTLPSharedCacheState::stepPE2() {
 }
 
 void CpuTLPSharedCacheState::stepUntilPE2(int n) {
-    std::cout << "[CpuTLPSharedCacheState] stepUntilPE2(" << n << ") called\n";
     if (m_pe2) {
         m_pe2->stepUntil(n);
     }
@@ -620,7 +607,6 @@ void CpuTLPSharedCacheState::stepUntilPE2(int n) {
 }
 
 void CpuTLPSharedCacheState::stepIndefinitelyPE2() {
-    std::cout << "[CpuTLPSharedCacheState] stepIndefinitelyPE2() called\n";
     if (m_pe2) {
         m_pe2->stepIndefinitely();
     }
@@ -630,7 +616,6 @@ void CpuTLPSharedCacheState::stepIndefinitelyPE2() {
 }
 
 void CpuTLPSharedCacheState::stopPE2() {
-    std::cout << "[CpuTLPSharedCacheState] stopPE2() called\n";
     if (m_pe2) {
         m_pe2->stopExecution();
     }
@@ -641,7 +626,6 @@ void CpuTLPSharedCacheState::stopPE2() {
 
 // ---- Wrappers de control PE3 ----
 void CpuTLPSharedCacheState::resetPE3() {
-    std::cout << "[CpuTLPSharedCacheState] resetPE3() called\n";
     if (m_pe3) {
         m_pe3->reset();
     }
@@ -651,7 +635,6 @@ void CpuTLPSharedCacheState::resetPE3() {
 }
 
 void CpuTLPSharedCacheState::stepPE3() {
-    std::cout << "[CpuTLPSharedCacheState] stepPE3() called\n";
     if (m_pe3) {
         m_pe3->step();
     }
@@ -661,7 +644,6 @@ void CpuTLPSharedCacheState::stepPE3() {
 }
 
 void CpuTLPSharedCacheState::stepUntilPE3(int n) {
-    std::cout << "[CpuTLPSharedCacheState] stepUntilPE3(" << n << ") called\n";
     if (m_pe3) {
         m_pe3->stepUntil(n);
     }
@@ -671,7 +653,6 @@ void CpuTLPSharedCacheState::stepUntilPE3(int n) {
 }
 
 void CpuTLPSharedCacheState::stepIndefinitelyPE3() {
-    std::cout << "[CpuTLPSharedCacheState] stepIndefinitelyPE3() called\n";
     if (m_pe3) {
         m_pe3->stepIndefinitely();
     }
@@ -681,7 +662,6 @@ void CpuTLPSharedCacheState::stepIndefinitelyPE3() {
 }
 
 void CpuTLPSharedCacheState::stopPE3() {
-    std::cout << "[CpuTLPSharedCacheState] stopPE3() called\n";
     if (m_pe3) {
         m_pe3->stopExecution();
     }

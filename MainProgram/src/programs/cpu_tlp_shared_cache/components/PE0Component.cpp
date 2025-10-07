@@ -292,7 +292,6 @@ namespace cpu_tlp {
         }
         break;
         case 0x21: // CRASH
-            std::cerr << "[PE" << 0 << "] CRASH instruction executed!\n";
             res.value = 0;
             break;
         case 0x22: // NOTHING
@@ -670,20 +669,9 @@ namespace cpu_tlp {
         out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = false;
         out.FlushD = out.FlushE = false;
 
-        log_build_and_print([&](std::ostringstream& oss) {
-            oss << "  [HazardUnit] Inputs: Rd_D=" << (int)Rd_in_D
-                << " Rn=" << (int)Rn_in << " Rm=" << (int)Rm_in
-                << " | Rd_E=" << (int)Rd_in_E << "(RegWr=" << (int)RegWrite_E << ")"
-                << " Rd_M=" << (int)Rd_in_M << "(RegWr=" << (int)RegWrite_M << ")"
-                << " Rd_W=" << (int)Rd_in_W << "(RegWr=" << (int)RegWrite_W << ")"
-                << " | BranchE=" << (int)BranchE << " PCSrc_AND=" << (int)PCSrc_AND
-                << " PCSrc_W=" << (int)PCSrc_W << "\n";
-            });
-
         // 1. SegmentationFault
         if (SegmentationFault) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
-            log_line("  [HazardUnit] SEGFAULT -> Full stall\n");
             return out;
         }
 
@@ -691,14 +679,12 @@ namespace cpu_tlp {
         if (!INS_READY) {
             out.StallF = true;
             out.StallD = true;
-            log_line("  [HazardUnit] !INS_READY -> StallF, StallD\n");
             return out;
         }
 
         // 3. CacheLatency
         if (C_REQUEST_M && !C_READY) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
-            log_line("  [HazardUnit] Cache latency -> Full stall\n");
             return out;
         }
 
@@ -708,40 +694,23 @@ namespace cpu_tlp {
         if (Rn_in != 0) {
             if (RegWrite_E && Rd_in_E != 0 && Rd_in_E == Rn_in) {
                 rawHazard = true;
-                log_build_and_print([&](std::ostringstream& oss) {
-                    oss << "  [HazardUnit] RAW: Rn=" << (int)Rn_in
-                        << " depends on Rd_E=" << (int)Rd_in_E << "\n";
-                    });
             }
             if (RegWrite_M && Rd_in_M != 0 && Rd_in_M == Rn_in) {
                 rawHazard = true;
-                log_build_and_print([&](std::ostringstream& oss) {
-                    oss << "  [HazardUnit] RAW: Rn=" << (int)Rn_in
-                        << " depends on Rd_M=" << (int)Rd_in_M << "\n";
-                    });
             }
         }
         if (Rm_in != 0) {
             if (RegWrite_E && Rd_in_E != 0 && Rd_in_E == Rm_in) {
                 rawHazard = true;
-                log_build_and_print([&](std::ostringstream& oss) {
-                    oss << "  [HazardUnit] RAW: Rm=" << (int)Rm_in
-                        << " depends on Rd_E=" << (int)Rd_in_E << "\n";
-                    });
             }
             if (RegWrite_M && Rd_in_M != 0 && Rd_in_M == Rm_in) {
                 rawHazard = true;
-                log_build_and_print([&](std::ostringstream& oss) {
-                    oss << "  [HazardUnit] RAW: Rm=" << (int)Rm_in
-                        << " depends on Rd_M=" << (int)Rd_in_M << "\n";
-                    });
             }
         }
 
         if (rawHazard) {
             out.StallF = out.StallD = true;
             out.FlushE = true;
-            log_line("  [HazardUnit] -> Applying: StallF, StallD, FlushE\n");
             return out;
         }
 
@@ -751,7 +720,6 @@ namespace cpu_tlp {
             branchActive = true;
             branchCycles = 0;
             branchWaitingForW = false;
-            log_line("  [HazardUnit] Branch detected in Decode, starting handling\n");
         }
 
         if (branchActive) {
@@ -761,7 +729,6 @@ namespace cpu_tlp {
                 // Ciclo 1: Branch en D → StallF, FlushD siempre
                 out.StallF = true;
                 out.FlushD = true;
-                log_line("  [HazardUnit] Branch cycle 1 (in D) -> StallF, FlushD\n");
             }
             else if (branchCycles == 2) {
                 // Ciclo 2: Branch en E, evaluar PCSrc_AND
@@ -770,12 +737,10 @@ namespace cpu_tlp {
                     out.StallF = true;
                     out.FlushD = true;
                     branchWaitingForW = true;
-                    log_line("  [HazardUnit] Branch cycle 2 (in E) TAKEN -> StallF, FlushD (continuing)\n");
                 }
                 else {
                     // Branch NO TOMADO: terminar inmediatamente
                     branchActive = false;
-                    log_line("  [HazardUnit] Branch cycle 2 (in E) NOT TAKEN -> end\n");
                 }
             }
             else if (branchWaitingForW) {
@@ -786,32 +751,20 @@ namespace cpu_tlp {
                     out.FlushD = true;  // ← Solo FlushD, sin StallF
                     branchWaitingForW = false;
                     branchActive = false;  // ← Terminar aquí mismo
-                    log_build_and_print([&](std::ostringstream& oss) {
-                        oss << "  [HazardUnit] Branch in W (cycle " << branchCycles
-                            << ") PC updating NOW -> FlushD only\n";
-                        });
                 }
                 else {
                     // Aún esperando que llegue a W
                     out.StallF = true;
                     out.FlushD = true;
-                    log_build_and_print([&](std::ostringstream& oss) {
-                        oss << "  [HazardUnit] Branch cycle " << branchCycles
-                            << " (waiting for W) -> StallF, FlushD\n";
-                        });
                 }
             }
             else {
                 // Ya no debería llegar aquí
                 branchActive = false;
-                log_line("  [HazardUnit] Branch cleanup\n");
             }
         }
-
         if (!rawHazard && !branchActive) {
-            log_line("  [HazardUnit] No hazards detected\n");
         }
-
         return out;
     }
 
@@ -879,16 +832,12 @@ namespace cpu_tlp {
 
     bool PE0Component::initialize(std::shared_ptr<CPUSystemSharedData> sharedData) {
         if (m_isRunning.load()) {
-            std::cerr << "[PE" << m_pe_id << "] Already running\n";
             return false;
         }
-
         m_sharedData = std::move(sharedData);
         if (!m_sharedData) {
-            std::cerr << "[PE" << m_pe_id << "] Invalid shared data\n";
             return false;
         }
-
         // Configurar PEID en el registro file
         m_registerFile.setPEID(m_pe_id);
 
@@ -898,7 +847,6 @@ namespace cpu_tlp {
                 m_sharedData->pe_registers[m_pe_id].registers[addr].store(value, std::memory_order_release);
             }
             };
-
         // Reset de control
         auto& ctrl = m_sharedData->pe_control[m_pe_id];
         ctrl.command.store(0, std::memory_order_release);
@@ -1009,18 +957,15 @@ namespace cpu_tlp {
 
     void PE0Component::step() {
         if (!m_sharedData) {
-            std::cerr << "[PE" << m_pe_id << "] step() called but no shared data!\n";
             return;
         }
         auto& ctrl = m_sharedData->pe_control[m_pe_id];
         ctrl.command.store(1, std::memory_order_release);
         ctrl.running.store(true, std::memory_order_release);
-        std::cout << "[PE" << m_pe_id << "] step() command issued\n";
     }
 
     void PE0Component::stepUntil(int value) {
         if (!m_sharedData) {
-            std::cerr << "[PE" << m_pe_id << "] stepUntil() called but no shared data!\n";
             return;
         }
         if (value <= 0) value = 1;
@@ -1028,29 +973,24 @@ namespace cpu_tlp {
         ctrl.step_count.store(value, std::memory_order_release);
         ctrl.command.store(2, std::memory_order_release);
         ctrl.running.store(true, std::memory_order_release);
-        std::cout << "[PE" << m_pe_id << "] stepUntil(" << value << ") command issued\n";
     }
 
     void PE0Component::stepIndefinitely() {
         if (!m_sharedData) {
-            std::cerr << "[PE" << m_pe_id << "] stepIndefinitely() called but no shared data!\n";
             return;
         }
         auto& ctrl = m_sharedData->pe_control[m_pe_id];
         ctrl.should_stop.store(false, std::memory_order_release);
         ctrl.command.store(3, std::memory_order_release);
         ctrl.running.store(true, std::memory_order_release);
-        std::cout << "[PE" << m_pe_id << "] stepIndefinitely() command issued\n";
     }
 
     void PE0Component::stopExecution() {
         if (!m_sharedData) {
-            std::cerr << "[PE" << m_pe_id << "] stopExecution() called but no shared data!\n";
             return;
         }
         auto& ctrl = m_sharedData->pe_control[m_pe_id];
         ctrl.should_stop.store(true, std::memory_order_release);
-        std::cout << "[PE" << m_pe_id << "] stopExecution() command issued\n";
     }
 
     // ============================================================================
@@ -1073,26 +1013,21 @@ namespace cpu_tlp {
                 break;
 
             case 1: // step
-                std::cout << "[PE" << m_pe_id << "] Executing STEP\n";
                 executeCycle();
                 ctrl.command.store(0, std::memory_order_release);
                 ctrl.running.store(false, std::memory_order_release);
-                std::cout << "[PE" << m_pe_id << "] STEP completed\n";
                 break;
 
             case 2: { // step_until
                 int left = ctrl.step_count.load(std::memory_order_acquire);
                 if (left <= 0) {
-                    std::cout << "[PE" << m_pe_id << "] STEP_UNTIL finished (count reached 0)\n";
                     ctrl.command.store(0, std::memory_order_release);
                     ctrl.running.store(false, std::memory_order_release);
                     break;
                 }
-                std::cout << "[PE" << m_pe_id << "] Executing STEP_UNTIL (remaining: " << left << ")\n";
                 executeCycle();
                 ctrl.step_count.store(left - 1, std::memory_order_release);
                 if (left - 1 <= 0 || ctrl.should_stop.load(std::memory_order_acquire)) {
-                    std::cout << "[PE" << m_pe_id << "] STEP_UNTIL completed\n";
                     ctrl.command.store(0, std::memory_order_release);
                     ctrl.running.store(false, std::memory_order_release);
                     ctrl.should_stop.store(false, std::memory_order_release);
@@ -1102,20 +1037,13 @@ namespace cpu_tlp {
 
             case 3: { // step_infinite - AGREGADO: llaves para crear scope
                 if (ctrl.should_stop.load(std::memory_order_acquire)) {
-                    std::cout << "[PE" << m_pe_id << "] STEP_INFINITE stopped by user\n";
                     ctrl.command.store(0, std::memory_order_release);
                     ctrl.running.store(false, std::memory_order_release);
                     ctrl.should_stop.store(false, std::memory_order_release);
                     break;
                 }
-                // Solo imprimir cada 100 ciclos para no saturar
-                static int infinite_counter = 0;
-                if (infinite_counter % 100 == 0) {
-                    std::cout << "[PE" << m_pe_id << "] STEP_INFINITE running (cycle " << infinite_counter << ")\n";
-                }
-                infinite_counter++;
                 executeCycle();
-                std::this_thread::sleep_for(10us);
+                std::this_thread::sleep_for(1us);
                 break;
             } // AGREGADO: cierre de llaves
 
@@ -1124,7 +1052,6 @@ namespace cpu_tlp {
                 reset();
                 ctrl.command.store(0, std::memory_order_release);
                 ctrl.running.store(false, std::memory_order_release);
-                std::cout << "[PE" << m_pe_id << "] RESET completed\n";
                 break;
 
             default:
@@ -1144,13 +1071,6 @@ namespace cpu_tlp {
 
     void PE0Component::executeCycle() {
         auto& instConn = m_sharedData->instruction_connections[m_pe_id];
-
-        log_build_and_print([&](std::ostringstream& oss) {
-            oss << "[PE" << m_pe_id << "] executeCycle() START - PC=0x"
-                << std::hex << PC_F
-                << " PC_F(shared)=0x" << instConn.PC_F.load(std::memory_order_acquire)
-                << std::dec << "\n";
-            });
 
         PCPlus8_F = PC_F + 8;
 
@@ -1198,17 +1118,17 @@ namespace cpu_tlp {
         uint64_t old_pc = PC_F;
         if (!m_hazards.StallF) {
             PC_F = PC_prime;
-        }
 
+            // Si hubo redirect de PC, invalidar inmediatamente el fetch actual
+            if (PC_F != old_pc) {
+                auto& instConn = m_sharedData->instruction_connections[m_pe_id];
+                instConn.INS_READY.store(false, std::memory_order_release);
+            }
+        }
         instConn.PC_F.store(PC_F, std::memory_order_release);
 
-        log_build_and_print([&](std::ostringstream& oss) {
-            oss << "  [executeCycle] END - PC changed: "
-                << std::hex << old_pc << " -> " << PC_F
-                << " StallF=" << std::dec << m_hazards.StallF << "\n";
-            });
 
-        std::this_thread::sleep_for(std::chrono::microseconds(5));
+        std::this_thread::sleep_for(std::chrono::microseconds(500));
     }
 
     // ============================================================================
@@ -1220,12 +1140,6 @@ namespace cpu_tlp {
 
         bool ins_ready = instConn.INS_READY.load(std::memory_order_acquire);
         uint64_t instr = instConn.InstrF.load(std::memory_order_acquire);
-
-        log_build_and_print([&](std::ostringstream& oss) {
-            oss << "  [stageFetch] PC=" << std::hex << PC_F
-                << " INS_READY=" << std::dec << (int)ins_ready
-                << " Instr=0x" << std::hex << instr << std::dec << "\n";
-            });
 
         if (ins_ready) {
             IF_ID_next.Instr_F = instr;
@@ -1276,14 +1190,6 @@ namespace cpu_tlp {
 
             // *** NUEVO: notificar al hilo principal que muestre popup ***
             m_sharedData->ui_signals[m_pe_id].swi_count.fetch_add(1, std::memory_order_acq_rel);
-
-            // Mensajes para consola + log
-            log_build_and_print([&](std::ostringstream& oss) {
-                oss << "[PE" << m_pe_id << "] SWI reached Decode -> STOP"
-                    << (wasInfinite ? " (infinite STEP disabled)" : "")
-                    << " | PC=0x" << std::hex << PC_in << std::dec << "\n";
-                });
-            std::cout << "[PE" << m_pe_id << "] Se aplicó un SWI -> STOP\n";
         }
 
         // Register File (lectura)
@@ -1331,18 +1237,6 @@ namespace cpu_tlp {
             ctrlSignals.BranchE,
             ID_EX.BranchOp_D
         );
-
-        // Hazards aplicados (atómico)
-        log_build_and_print([&](std::ostringstream& oss) {
-            oss << "  [stageDecode] Hazards applied: "
-                << "StallF=" << m_hazards.StallF
-                << " StallD=" << m_hazards.StallD
-                << " FlushD=" << m_hazards.FlushD
-                << " StallE=" << m_hazards.StallE
-                << " FlushE=" << m_hazards.FlushE
-                << " StallM=" << m_hazards.StallM
-                << " StallW=" << m_hazards.StallW << "\n";
-            });
 
         // Preparar next flipflop
         uint8_t rd = Rd_in_D;
@@ -1393,20 +1287,6 @@ namespace cpu_tlp {
 
         // AND de branching
         PCSrc_AND = ID_EX.PCSrc_D && CondExE;
-
-        // NUEVO: Print de debug para flags
-        if (ID_EX.BranchOp_D != 0 || ID_EX.FlagsUpd_D) {
-            log_build_and_print([&](std::ostringstream& oss) {
-                bool N = (Flags_prime & 0x8) != 0;
-                bool Z = (Flags_prime & 0x4) != 0;
-                bool C = (Flags_prime & 0x2) != 0;
-                bool V = (Flags_prime & 0x1) != 0;
-                oss << "  [stageExecute] Flags_prime=0x" << std::hex << (int)Flags_prime
-                    << " (N=" << N << " Z=" << Z << " C=" << C << " V=" << V << ")"
-                    << " BranchOp=" << std::dec << (int)ID_EX.BranchOp_D
-                    << " CondExE=" << CondExE << " PCSrc_AND=" << PCSrc_AND << "\n";
-                });
-        }
 
         // Preparar next flipflop
         EX_MEM_next.RegWrite_E = ID_EX.RegWrite_D;
@@ -1487,16 +1367,6 @@ namespace cpu_tlp {
         snap[4] = MEM_WB.Instr_M;
 
         m_stageInstructions = snap;
-
-        // (Opcional pero recomendado) Usa el desensamblador consistente
-        // en el log, para evitar discrepancias NAME vs UI.
-        log_build_and_print([&](std::ostringstream& oss) {
-            oss << "  [PIPELINE] F: " << InstructionDisassembler::disassemble(snap[0])
-                << " | D: " << InstructionDisassembler::disassemble(snap[1])
-                << " | E: " << InstructionDisassembler::disassemble(snap[2])
-                << " | M: " << InstructionDisassembler::disassemble(snap[3])
-                << " | W: " << InstructionDisassembler::disassemble(snap[4]) << "\n";
-            });
 
         // Publicación a la UI: escribe con "seqlock" simple para evitar tearing visual
         if (m_sharedData) {
