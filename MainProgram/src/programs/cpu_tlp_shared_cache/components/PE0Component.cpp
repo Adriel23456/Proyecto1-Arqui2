@@ -668,6 +668,7 @@ namespace cpu_tlp {
         Outputs out;
         out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = false;
         out.FlushD = out.FlushE = false;
+        out.C_READY_ACK = false;
 
         // 1. SegmentationFault
         if (SegmentationFault) {
@@ -682,8 +683,56 @@ namespace cpu_tlp {
             return out;
         }
 
-        // 3. CacheLatency
-        if (C_REQUEST_M && !C_READY) {
+        // 3. CacheLatency con Handshake Completo
+        bool memoryStall = false;
+
+        if (C_REQUEST_M) {
+            // Hay una operación de memoria activa
+            if (!inMemoryOperation) {
+                // ===== INICIO DE NUEVA OPERACIÓN =====
+                inMemoryOperation = true;
+                ackSent = false;
+            }
+
+            // Máquina de estados del handshake
+            if (!ackSent) {
+                // --- FASE 1: Esperando que cache complete (C_READY=1) ---
+                if (C_READY) {
+                    // Cache completó la operación, enviar ACK
+                    ackSent = true;
+                    out.C_READY_ACK = true;
+                    memoryStall = true;  // Seguir en stall
+                }
+                else {
+                    // Todavía esperando que cache procese
+                    memoryStall = true;
+                }
+            }
+            else {
+                // --- FASE 2: ACK enviado, esperando que cache baje C_READY ---
+                if (C_READY) {
+                    // Cache todavía no reconoce el ACK
+                    out.C_READY_ACK = true;  // Mantener ACK activo
+                    memoryStall = true;      // Seguir en stall
+                }
+                else {
+                    // ===== HANDSHAKE COMPLETO =====
+                    // Cache bajó C_READY, reconoció el ACK
+                    out.C_READY_ACK = false;     // Limpiar ACK
+                    inMemoryOperation = false;   // Marcar operación como completa
+                    ackSent = false;             // Reset estado
+                    memoryStall = false;         // ¡PERMITIR AVANZAR!
+                }
+            }
+        }
+        else {
+            // No hay operación de memoria activa
+            inMemoryOperation = false;
+            ackSent = false;
+            out.C_READY_ACK = false;
+        }
+
+        if (memoryStall) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
             return out;
         }
@@ -1081,6 +1130,10 @@ namespace cpu_tlp {
         stageFetch();
 
         updateInstructionTracking();
+
+        // ← NUEVO: Escribir C_READY_ACK a la conexión compartida
+        auto& cacheConn = m_sharedData->cache_connections[m_pe_id];
+        cacheConn.C_READY_ACK.store(m_hazards.C_READY_ACK, std::memory_order_release);
 
         // Actualizar flipflops
         if (!m_hazards.StallW) {

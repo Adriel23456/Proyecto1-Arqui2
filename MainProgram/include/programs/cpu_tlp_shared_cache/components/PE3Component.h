@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "programs/cpu_tlp_shared_cache/components/SharedData.h"
 #include <thread>
 #include <memory>
@@ -125,6 +125,7 @@ namespace cpu_tlp {
         public:
             struct Outputs {
                 bool StallF, StallD, FlushD, StallE, FlushE, StallM, StallW;
+                bool C_READY_ACK;  // ← NUEVO: señal de ACK para la cache
             };
 
             Outputs detect(
@@ -143,6 +144,9 @@ namespace cpu_tlp {
             int branchCycles = 0;
             bool branchActive = false;
             bool branchWaitingForW = false;
+            // ← NUEVO: estado del handshake de memoria
+            bool inMemoryOperation = false;  // ¿Estamos procesando una operación de memoria?
+            bool ackSent = false;            // ¿Ya enviamos el ACK?
         };
 
         // ============ ETAPAS DEL PIPELINE ============

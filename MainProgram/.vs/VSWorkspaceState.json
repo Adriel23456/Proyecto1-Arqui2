@@ -9,16 +9,13 @@
   },
   "ExpandedNodes": [
     "",
-    "\\include\\programs",
     "\\include\\programs\\cpu_tlp_shared_cache",
     "\\include\\programs\\cpu_tlp_shared_cache\\components",
-    "\\out",
     "\\out\\build",
     "\\resources\\Assets\\CPU_TLP",
     "\\src\\programs",
     "\\src\\programs\\cpu_tlp_shared_cache",
     "\\src\\programs\\cpu_tlp_shared_cache\\components"
   ],
-  "SelectedNode": "\\out\\build",
   "PreviewInSolutionExplorer": false
 }

@@ -19,6 +19,7 @@ namespace cpu_tlp {
         std::atomic<bool> C_REQUEST_M{ false };
         std::atomic<uint64_t> RD_C_out{ 0x0000000000000000ULL };
         std::atomic<bool> C_READY{ false };
+        std::atomic<bool> C_READY_ACK{ false };
     };
 
     struct PEControlSignals {

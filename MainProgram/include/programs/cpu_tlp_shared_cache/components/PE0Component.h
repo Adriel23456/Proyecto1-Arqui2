@@ -1,4 +1,4 @@
-#pragma once
+Ôªø#pragma once
 #include "programs/cpu_tlp_shared_cache/components/SharedData.h"
 #include <thread>
 #include <memory>
@@ -54,7 +54,7 @@ namespace cpu_tlp {
             uint64_t SrcB_D;
             uint64_t RD_Rm_out;
             uint8_t Rd_in_D;
-            // NUEVO: instrucciÛn que entra a Execute
+            // NUEVO: instrucci√≥n que entra a Execute
             uint64_t Instr_D = 0x4D00000000000000ULL; // NOP
         };
 
@@ -68,7 +68,7 @@ namespace cpu_tlp {
             uint64_t ALUResult_E;
             uint64_t RD_Rm_Special_E;
             uint8_t Rd_in_E;
-            // NUEVO: instrucciÛn que entra a Memory
+            // NUEVO: instrucci√≥n que entra a Memory
             uint64_t Instr_E = 0x4D00000000000000ULL; // NOP
         };
 
@@ -77,7 +77,7 @@ namespace cpu_tlp {
             uint8_t PCSrc_M;
             uint64_t ALUOutM_O;
             uint8_t Rd_in_M;
-            // NUEVO: instrucciÛn que entra a WriteBack
+            // NUEVO: instrucci√≥n que entra a WriteBack
             uint64_t Instr_M = 0x4D00000000000000ULL; // NOP
         };
 
@@ -129,6 +129,7 @@ namespace cpu_tlp {
         public:
             struct Outputs {
                 bool StallF, StallD, FlushD, StallE, FlushE, StallM, StallW;
+                bool C_READY_ACK;
             };
 
             Outputs detect(
@@ -147,6 +148,10 @@ namespace cpu_tlp {
             int branchCycles = 0;
             bool branchActive = false;
             bool branchWaitingForW = false;
+
+            // ‚Üê NUEVO: estado del handshake de memoria
+            bool inMemoryOperation = false;  // ¬øEstamos procesando una operaci√≥n de memoria?
+            bool ackSent = false;            // ¬øYa enviamos el ACK?
         };
 
         // ============ ETAPAS DEL PIPELINE ============
@@ -175,7 +180,7 @@ namespace cpu_tlp {
         ExecuteMemoryReg EX_MEM, EX_MEM_next;
         MemoryWriteBackReg MEM_WB, MEM_WB_next;
 
-        // SeÒales intermedias (Decode)
+        // Se√±ales intermedias (Decode)
         uint64_t InstrD;
         uint64_t PC_in;
         uint8_t Op_in, Rn_in, Rm_in, Rd_in_D;
@@ -186,17 +191,17 @@ namespace cpu_tlp {
         uint64_t SrcA_D, SrcB_D;
         ControlUnit::Signals ctrlSignals;
 
-        // SeÒales intermedias (Execute)
+        // Se√±ales intermedias (Execute)
         uint8_t ALUFlagsOut;
         uint64_t ALUResult_E;
         uint8_t Flags_prime;  // Flags'
         bool CondExE;
         bool PCSrc_AND;
 
-        // SeÒales intermedias (Memory)
+        // Se√±ales intermedias (Memory)
         uint64_t ALUOutM_O;
 
-        // SeÒales intermedias (WriteBack)
+        // Se√±ales intermedias (WriteBack)
         uint64_t PC_prime;
 
         // Unidades
