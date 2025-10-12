@@ -17,21 +17,6 @@
 *.userosscache
 *.sln.docstates
 
-# =========================
-# Build dirs (solo en la raíz)
-# =========================
-/[Bb]in/
-/[Oo]bj/
-/[Dd]ebug/
-/[Rr]elease/
-/x64/
-/x86/
-/[Aa][Rr][Mm]/
-/[Aa][Rr]64/
-/[Bb]uild/
-/out/
-/dist/
-
 # CMake (árboles de build)
 **/CMakeFiles/
 **/CMakeCache.txt
@@ -73,7 +58,6 @@ ipch/
 # Binarios (por defecto ignorados)
 # =========================
 *.exe
-*.dll
 *.lib
 *.so
 *.a
@@ -87,9 +71,20 @@ ipch/
 !packages/build/
 *.nupkg
 
-# =========================
-# EXCEPCIÓN: mantener third-party (plug & play)
-# =========================
-# Re-incluir TODO bajo MainProgram/thirdparty (pisando ignores anteriores)
+# --- Allow-list: TODO lo de thirdparty, incluso x64/x86 y binarios ---
 !MainProgram/thirdparty/
 !MainProgram/thirdparty/**
+
+# Por si existe algún ignore agresivo de x64/x86 en otro .gitignore/global:
+!MainProgram/thirdparty/**/x64/
+!MainProgram/thirdparty/**/x64/**
+!MainProgram/thirdparty/**/x86/
+!MainProgram/thirdparty/**/x86/**
+
+# Y levanta los binarios dentro de thirdparty
+!MainProgram/thirdparty/**/*.[Dd][Ll][Ll]
+!MainProgram/thirdparty/**/*.[Ll][Ii][Bb]
+!MainProgram/thirdparty/**/*.[Pp][Dd][Bb]
+!MainProgram/thirdparty/**/*.[Ss][Oo]
+!MainProgram/thirdparty/**/*.[Aa]
+!MainProgram/thirdparty/**/*.[Dd][Yy][Ll][Ii][Bb]
