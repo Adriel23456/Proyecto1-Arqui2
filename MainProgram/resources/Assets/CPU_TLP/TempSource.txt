@@ -1,0 +1,43 @@
+; =======================================================
+; PRUEBA 1: Suma de 1 a 10 (Resultado esperado en REG2: 55)
+; =======================================================
+MOVI REG1, #1        ; REG1 = 1 (Contador 'i')
+MOVI REG2, #0        ; REG2 = 0 (Acumulador de suma)
+MOVI REG3, #11       ; REG3 = 11 (Lmite: terminar cuando i == 11)
+
+.LOOP_START:
+    ADD  REG2, REG2, REG1    ; REG2 = REG2 + REG1 (Acumulador += i)
+    ADDI REG1, REG1, #1      ; REG1 = REG1 + 1    (i++)
+    
+    CMPI REG1, #11           ; Compara REG1 con 11
+    BLT  .LOOP_START         ; Si REG1 < 11, ir a .LOOP_START
+
+SWI                          ; Fin de la primera seccin para inspeccin
+
+; =======================================================
+; PRUEBA 2: Comparacin y Salto (Sustituyendo el CMP de 2 op)
+; Asume que el resultado de la suma (REG2) es 55.
+; =======================================================
+MOVI REG4, #55       ; REG4 = 55 (Valor de comparacin)
+
+; En lugar de CMP REG2, REG4, usamos SUB y CMPI para replicar el efecto
+SUB  REG8, REG2, REG4    ; REG8 = REG2 - REG4. Si REG2=REG4, REG8=0.
+
+; CMP de REGISTRO (CMP REG2, REG4) no funciona. Usamos CMPI con 0.
+CMPI REG8, #0            ; Compara el resultado de la resta (REG8) con 0
+BEQ  .EQUAL_LABEL        ; Si REG8 == 0 (es decir, REG2 == REG4), salta a .EQUAL_LABEL
+
+; Si no son iguales
+BUN  .NOTEQUAL_LABEL     ; Salto incondicional al bloque NotEqual
+
+.EQUAL_LABEL:
+    MOVI REG5, #1        ; Bandera de xito REG5 = 1
+    SWI                  ; Detener y ver REG5
+
+.NOTEQUAL_LABEL:
+    MOVI REG5, #0        ; Bandera de fallo REG5 = 0
+    SWI                  ; Detener y ver REG5
+
+NOP
+NOP
+SWI

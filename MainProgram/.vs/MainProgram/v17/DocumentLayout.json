@@ -1,12 +1,23 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\",
+  "WorkspaceRootPath": "C:\\Users\\andre\\Desktop\\ArquiII\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\",
   "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
