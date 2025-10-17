@@ -12,15 +12,13 @@
     "\\include",
     "\\include\\programs",
     "\\include\\programs\\cpu_tlp_shared_cache",
-    "\\include\\programs\\cpu_tlp_shared_cache\\components",
-    "\\resources",
-    "\\resources\\Assets",
-    "\\resources\\Assets\\CPU_TLP",
+    "\\include\\programs\\cpu_tlp_shared_cache\\views",
     "\\src",
     "\\src\\programs",
     "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components"
+    "\\src\\programs\\cpu_tlp_shared_cache\\components",
+    "\\src\\programs\\cpu_tlp_shared_cache\\views"
   ],
-  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\components\\SharedMemory",
+  "SelectedNode": "\\include\\programs\\cpu_tlp_shared_cache\\views\\RAMView.h",
   "PreviewInSolutionExplorer": false
 }
