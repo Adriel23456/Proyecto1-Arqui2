@@ -8,8 +8,9 @@
     ]
   },
   "ExpandedNodes": [
-    ""
+    "",
+    "\\include\\programs\\cpu_tlp_shared_cache"
   ],
-  "SelectedNode": "\\CMakeLists.txt",
+  "SelectedNode": "\\src",
   "PreviewInSolutionExplorer": false
 }
