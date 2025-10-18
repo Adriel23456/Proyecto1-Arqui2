@@ -3,21 +3,8 @@
   "WorkspaceRootPath": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\",
   "Documents": [
     {
-<<<<<<< HEAD
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\thirdparty\\SFML-2.6.1\\extlibs\\bin\\x64\\openal32.dll||{177559E0-D141-11D0-92DF-00A0C9138C45}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:thirdparty\\SFML-2.6.1\\extlibs\\bin\\x64\\openal32.dll||{177559E0-D141-11D0-92DF-00A0C9138C45}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\CMakeLists.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:CMakeLists.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
-=======
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\SharedMemory.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\SharedMemory.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
->>>>>>> Compiler
     }
   ],
   "DocumentGroupContainers": [
@@ -36,48 +23,14 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-<<<<<<< HEAD
-              "Title": "openal32.dll",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\thirdparty\\SFML-2.6.1\\extlibs\\bin\\x64\\openal32.dll",
-              "RelativeDocumentMoniker": "thirdparty\\SFML-2.6.1\\extlibs\\bin\\x64\\openal32.dll",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\thirdparty\\SFML-2.6.1\\extlibs\\bin\\x64\\openal32.dll",
-              "RelativeToolTip": "thirdparty\\SFML-2.6.1\\extlibs\\bin\\x64\\openal32.dll",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001697|",
-              "WhenOpened": "2025-10-12T16:41:06.115Z"
-=======
-              "Title": "SharedMemory.cpp",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\SharedMemory.cpp",
-              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\SharedMemory.cpp",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\SharedMemory.cpp",
-              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\SharedMemory.cpp",
-              "ViewState": "AgIAAPIAAAAAAAAAAADwv/4AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-18T08:16:49.302Z",
-              "EditorCaption": ""
->>>>>>> Compiler
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-<<<<<<< HEAD
               "Title": "CMakeLists.txt",
               "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\CMakeLists.txt",
               "RelativeDocumentMoniker": "CMakeLists.txt",
               "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\CMakeLists.txt",
               "RelativeToolTip": "CMakeLists.txt",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAAwBEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
               "WhenOpened": "2025-10-10T00:17:03.11Z",
-=======
-              "Title": "CpuTLPSharedCacheState.cpp",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp",
-              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp",
-              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp",
-              "ViewState": "AgIAAHkAAAAAAAAAAADgv4IAAAAhAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-18T08:12:14.54Z",
->>>>>>> Compiler
               "EditorCaption": ""
             }
           ]

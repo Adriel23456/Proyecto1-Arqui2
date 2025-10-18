@@ -8,14 +8,8 @@
     ]
   },
   "ExpandedNodes": [
-<<<<<<< HEAD
     ""
-=======
-    "",
-    "\\include\\ui\\dll_cs_lua_R_fortran_pascal",
-    "\\resources\\Assets\\CPU_TLP"
->>>>>>> Compiler
   ],
-  "SelectedNode": "\\out",
+  "SelectedNode": "\\CMakeLists.txt",
   "PreviewInSolutionExplorer": false
 }
