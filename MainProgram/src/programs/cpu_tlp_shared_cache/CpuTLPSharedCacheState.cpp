@@ -40,6 +40,12 @@ CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindo
         std::cerr << "[CpuTLP] InstructionMemory init failed\n";
     }
 
+    // 2.5) Lanzar SharedMemory (NUEVO)
+    m_sharedMemoryComponent = std::make_unique<cpu_tlp::SharedMemoryComponent>();
+    if (!m_sharedMemoryComponent->initialize(m_cpuSystemData)) {
+        std::cerr << "[CpuTLP] SharedMemory init failed\n";
+    }
+
     // 3) Crear PE0
     m_pe0 = std::make_unique<cpu_tlp::PE0Component>(0);
     if (!m_pe0->initialize(m_cpuSystemData)) {
@@ -112,6 +118,9 @@ CpuTLPSharedCacheState::~CpuTLPSharedCacheState() {
     if (m_pe0) m_pe0->shutdown();
     m_pe0.reset();
 
+    if (m_sharedMemoryComponent) m_sharedMemoryComponent->shutdown();
+    m_sharedMemoryComponent.reset();
+
     if (m_instructionMemory) m_instructionMemory->shutdown();
     m_instructionMemory.reset();
 }
@@ -159,7 +168,9 @@ void CpuTLPSharedCacheState::buildAllViews() {
     m_views[panelIndex(Panel::PE3Reg)] = std::make_unique<PE3RegView>();
     m_views[panelIndex(Panel::PE3Mem)] = std::make_unique<PE3MemView>();
 
-    m_views[panelIndex(Panel::RAM)] = std::make_unique<RAMView>();
+    auto ramView = std::make_unique<RAMView>();
+    ramView->setSharedMemoryComponent(m_sharedMemoryComponent.get());
+    m_views[panelIndex(Panel::RAM)] = std::move(ramView);
     m_views[panelIndex(Panel::AnalysisData)] = std::make_unique<AnalysisDataView>();
 }
 
