@@ -88,3 +88,15 @@ ipch/
 !MainProgram/thirdparty/**/*.[Ss][Oo]
 !MainProgram/thirdparty/**/*.[Aa]
 !MainProgram/thirdparty/**/*.[Dd][Yy][Ll][Ii][Bb]
+.vs/
+**/.vs/
+
+.vscode/
+
+# Salidas/build
+out/
+**/out/
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
