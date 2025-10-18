@@ -1,0 +1,8 @@
+; =======================================================
+; Comparación FCMPI (registro float con inmediato)
+; Resultado esperado: Flags Z=1, N=0, C=1, V=0 (son iguales)
+; =======================================================
+FMOVI REG1, #16.0          ; REG1 = 16.0
+FMOVI REG2, #16.0          ; REG2 = 16.0
+FCMPI REG1, #16.0          ; Compara REG1 con 16.0: son iguales → Z=1
+SWI                        ; Estado final: REG1=16.0, REG2=16.0, Flags: Z=1

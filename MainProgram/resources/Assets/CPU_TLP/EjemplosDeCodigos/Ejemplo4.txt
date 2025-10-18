@@ -1,0 +1,7 @@
+; Codigo simple, el programa se termina cuando REG1 = 4
+MOVI REG1, #0              ; REG1 = 0
+.Loop:
+  ADDI REG1, REG1, #1      ; REG1 = REG1 + 1
+  CMPI REG1, #4
+  BNE .Loop
+SWI

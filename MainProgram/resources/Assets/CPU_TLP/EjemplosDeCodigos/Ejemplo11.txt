@@ -1,0 +1,12 @@
+; =======================================================
+; Instrucción INC (incremento)
+; Resultado esperado: REG3 = 1, REG2 = 3
+; =======================================================
+MOVI REG1, #1              ; REG1 = 1
+MOVI REG2, #2              ; REG2 = 2
+INC REG3                   ; REG3 = REG3 + 1 = 0 + 1 = 1
+INC REG2                   ; REG2 = REG2 + 1 = 2 + 1 = 3
+NOP
+NOP
+NOP
+SWI                        ; Estado final: REG1=1, REG2=3, REG3=1

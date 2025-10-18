@@ -2,15 +2,20 @@
 #include "programs/cpu_tlp_shared_cache/views/ICpuTLPView.h"
 #include "programs/cpu_tlp_shared_cache/widgets/RamTable.h"
 
+// Forward declaration
+namespace cpu_tlp { class SharedMemoryComponent; }
+
 class RAMView : public ICpuTLPView {
 public:
-    void render() override;
+    RAMView() : m_sharedMemoryComponent(nullptr) {}
 
-    // API: setear 32B en una dirección
-    void setData(uint64_t address, const std::string& hex32bytes) { m_table.setDataByAddress(address, hex32bytes); }
-    // Alternativa por índice [0..127]
-    void setDataByIndex(int rowIndex, const std::string& hex32bytes) { m_table.setDataByIndex(rowIndex, hex32bytes); }
+    void setSharedMemoryComponent(cpu_tlp::SharedMemoryComponent* component) {
+        m_sharedMemoryComponent = component;
+    }
+
+    void render() override;
 
 private:
     RamTable m_table;
+    cpu_tlp::SharedMemoryComponent* m_sharedMemoryComponent;
 };

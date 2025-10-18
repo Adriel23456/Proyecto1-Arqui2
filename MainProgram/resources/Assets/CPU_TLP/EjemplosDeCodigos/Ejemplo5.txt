@@ -1,0 +1,12 @@
+; =======================================================
+; Loop simple usando CMP y BLT
+; Cuenta de 1 a 4
+; Resultado esperado: REG1 = 4, REG3 = 4
+; =======================================================
+MOVI REG1, #0              ; REG1 = 0 (contador)
+MOVI REG3, #4              ; REG3 = 4 (límite)
+.Loop:
+  ADDI REG1, REG1, #1      ; REG1++
+  CMP  REG1, REG3          ; Compara REG1 con 4
+  BLT .Loop                ; Salta si REG1 < 4
+SWI                        ; Estado final: REG1=4, REG3=4

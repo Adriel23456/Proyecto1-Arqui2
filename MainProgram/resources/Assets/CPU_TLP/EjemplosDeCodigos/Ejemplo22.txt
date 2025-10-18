@@ -1,0 +1,12 @@
+; =======================================================
+; STR con offset (guardar en memoria con desplazamiento)
+; Guarda REG1 en memoria[16 + 8] = memoria[24]
+; Resultado esperado: Memoria[24] = 16.0
+; =======================================================
+FMOVI REG1, #16.0          ; REG1 = 16.0
+MOVI REG2, #16             ; REG2 = 16 (dirección base)
+STR REG1, [REG2, #8]       ; Memoria[16 + 8] = Memoria[24] = REG1 = 16.0
+NOP
+NOP
+NOP
+SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[24]=16.0

@@ -1,0 +1,11 @@
+; =======================================================
+; Valor absoluto con inmediato float
+; Resultado esperado: REG3 = 15.0 (|-15.0| = 15.0)
+; =======================================================
+FMOVI REG1, #1.0           ; REG1 = 1.0
+FMOVI REG2, #16.0          ; REG2 = 16.0
+FABSI REG3, #-15.0         ; REG3 = |-15.0| = 15.0
+NOP
+NOP
+NOP
+SWI                        ; Estado final: REG1=1.0, REG2=16.0, REG3=15.0

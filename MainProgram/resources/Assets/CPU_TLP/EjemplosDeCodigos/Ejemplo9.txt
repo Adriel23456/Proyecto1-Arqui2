@@ -1,0 +1,11 @@
+; =======================================================
+; Operación AND bit a bit
+; Resultado esperado: REG3 = 0 (1 AND 2 = 0b01 AND 0b10 = 0b00)
+; =======================================================
+MOVI REG1, #1              ; REG1 = 1 (binario: 0001)
+MOVI REG2, #2              ; REG2 = 2 (binario: 0010)
+AND REG3, REG1, REG2       ; REG3 = 1 AND 2 = 0
+NOP
+NOP
+NOP
+SWI                        ; Estado final: REG1=1, REG2=2, REG3=0

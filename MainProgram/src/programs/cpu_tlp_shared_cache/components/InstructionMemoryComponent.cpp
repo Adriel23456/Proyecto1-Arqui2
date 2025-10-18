@@ -99,6 +99,11 @@ namespace cpu_tlp {
         bool success = loadInstructionMemory();
 
         if (success) {
+            // AÑADIR ESTAS LÍNEAS: Resetear lastPC para forzar actualización
+            for (int i = 0; i < 4; ++i) {
+                m_lastPC[i] = 0xFFFFFFFFFFFFFFFFULL;
+            }
+
             for (int i = 0; i < 4; ++i) {
                 auto& connection = m_sharedData->instruction_connections[i];
                 connection.PC_F.store(0x0000000000000000ULL, std::memory_order_release);
@@ -143,22 +148,16 @@ namespace cpu_tlp {
         auto& connection = m_sharedData->instruction_connections[peIndex];
         uint64_t currentPC = connection.PC_F.load(std::memory_order_acquire);
 
-        static std::array<uint64_t, 4> lastPC = { 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
-                                                  0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL };
-
-        if (currentPC != lastPC[peIndex]) {
-
+        // CAMBIAR DE STATIC A USAR LA VARIABLE MIEMBRO
+        if (currentPC != m_lastPC[peIndex]) {
             connection.INS_READY.store(false, std::memory_order_release);
 
-            // Leer instrucción
             uint64_t instruction = readInstructionFromFile(currentPC);
 
-            // Escribir instrucción
             connection.InstrF.store(instruction, std::memory_order_release);
-
             connection.INS_READY.store(true, std::memory_order_release);
 
-            lastPC[peIndex] = currentPC;
+            m_lastPC[peIndex] = currentPC;
         }
     }
 

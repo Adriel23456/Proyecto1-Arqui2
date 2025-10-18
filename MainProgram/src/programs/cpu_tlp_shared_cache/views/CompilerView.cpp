@@ -1,4 +1,6 @@
 ﻿#include "programs/cpu_tlp_shared_cache/views/CompilerView.h"
+#include "programs/cpu_tlp_shared_cache/components/Assembler.h"
+#include "../include/ui/tinyfiledialogs.h"
 #include "imgui.h"
 #include <iostream>
 #include <fstream>
@@ -19,7 +21,6 @@
 CompilerView::CompilerView() {
     m_source.reserve(16 * 1024);
 
-    // Texto de ejemplo por defecto (solo la primera vez)
     if (m_source.empty()) {
         static const char* kDefaultSource =
             "#Simple example of summing from 1 to 10000:\n"
@@ -31,10 +32,8 @@ CompilerView::CompilerView() {
             "\tCMPI REG1, #10001\n"
             "\tBLT .Loop\n"
             "SWI\n";
-
         m_source.assign(kDefaultSource);
 
-        // Mantener buena capacidad para edición fluida
         if (m_source.capacity() - m_source.size() < 1024)
             m_source.reserve(m_source.size() + 4096);
     }
@@ -50,86 +49,89 @@ int CompilerView::TextEditCallback(ImGuiInputTextCallbackData* data) {
 }
 
 bool CompilerView::compileToFile(const std::string& sourceCode) {
-    // Simulación de compilación: convertir el código fuente a instrucciones binarias
-    std::vector<uint64_t> instructions;
+    try {
+        std::string cleanedSource = sourceCode;
 
-    // Parser muy simplificado (esto es solo una simulación)
-    std::istringstream stream(sourceCode);
-    std::string line;
-
-    while (std::getline(stream, line)) {
-        // Quitar espacios en blanco al inicio y final
-        line.erase(0, line.find_first_not_of(" \t\r\n"));
-        line.erase(line.find_last_not_of(" \t\r\n") + 1);
-
-        // Ignorar comentarios y líneas vacías
-        if (line.empty() || line[0] == '#') continue;
-
-        // Ignorar etiquetas
-        if (line[0] == '.') continue;
-
-        // Simular conversión de instrucciones a binario
-        uint64_t instruction = 0x0000000000000000ULL;
-
-        // Ejemplos de instrucciones simuladas
-        if (line.find("MOVI") != std::string::npos) {
-            instruction = 0x1000000000000001ULL;  // Código simulado para MOVI
-        }
-        else if (line.find("ADD") != std::string::npos) {
-            instruction = 0x2000000000000002ULL;  // Código simulado para ADD
-        }
-        else if (line.find("CMPI") != std::string::npos) {
-            instruction = 0x3000000000000003ULL;  // Código simulado para CMPI
-        }
-        else if (line.find("BLT") != std::string::npos) {
-            instruction = 0x4000000000000004ULL;  // Código simulado para BLT
-        }
-        else if (line.find("SWI") != std::string::npos) {
-            instruction = 0x5000000000000005ULL;  // Código simulado para SWI
-        }
-        else {
-            // Instrucción desconocida, usar un patrón aleatorio
-            instruction = 0x0F00000000000000ULL | (instructions.size() & 0xFFFF);
+        // 1. Eliminación de BOM UTF-8 (Ya existente, solo se revisa el target)
+        if (!cleanedSource.empty() &&
+            (static_cast<unsigned char>(cleanedSource[0]) == 0xEF ||
+                static_cast<unsigned char>(cleanedSource[0]) == 0xFF)) {
+            // ... (Lógica de eliminación de BOM UTF-8 que ya tienes)
+            // Asegúrate de que m_source se actualice correctamente si usas el texto limpio:
+            if (cleanedSource.size() > 2 &&
+                static_cast<unsigned char>(cleanedSource[1]) == 0xBB &&
+                static_cast<unsigned char>(cleanedSource[2]) == 0xBF) {
+                cleanedSource = cleanedSource.substr(3);
+            }
+            else {
+                cleanedSource = cleanedSource.substr(1);
+            }
         }
 
-        instructions.push_back(instruction);
+        // **2. LIMPIEZA DE CARACTERES NO ASCII Y ESPACIOS NO ESTÁNDAR (MEJORADO)**
+        std::string finalSource;
+        finalSource.reserve(cleanedSource.size());
+
+        for (size_t i = 0; i < cleanedSource.length(); ++i) {
+            unsigned char c = static_cast<unsigned char>(cleanedSource[i]);
+
+            // --- Normalización de saltos de línea ---
+            if (c == '\r') {
+                finalSource += '\n'; // Convertir \r a \n
+                // Si es \r\n, saltar el siguiente \n para no duplicar
+                if (i + 1 < cleanedSource.length() && cleanedSource[i + 1] == '\n') {
+                    i++;
+                }
+            }
+            else if (c == '\n') {
+                finalSource += '\n'; // Mantener \n
+            }
+            // --- Mantener caracteres ASCII imprimibles estándar ---
+            else if (c >= 32 && c <= 126) {
+                // Rango ASCII imprimible estándar (incluye espacio, #, etc.)
+                finalSource += static_cast<char>(c);
+            }
+            // --- Ignorar el resto (caracteres de control, no ASCII, etc.) ---
+        }
+
+        // 3. Guardar temporalmente el texto limpio en un archivo
+        std::string tmpPath = std::string(RESOURCES_PATH) + "Assets/CPU_TLP/TempSource.txt";
+        MKDIR((std::string(RESOURCES_PATH) + "Assets/CPU_TLP").c_str());
+        std::ofstream tmpFile(tmpPath);
+        tmpFile << finalSource; // <-- Usar la cadena limpia
+        tmpFile.close();
+
+        // 4. Usar el ensamblador (el resto del código sigue igual)
+        Assembler assembler;
+
+        std::vector<uint64_t> instructions = assembler.assembleFile(tmpPath);
+
+        // 3. Escribir el resultado binario
+        std::string outPath = std::string(RESOURCES_PATH) + "Assets/CPU_TLP/InstMem.bin";
+        std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
+        if (!out.is_open()) {
+            std::cerr << "[CompilerView] Could not open file for writing: " << outPath << std::endl;
+            return false;
+        }
+
+        for (uint64_t inst : instructions) {
+            uint8_t bytes[8];
+            for (int i = 0; i < 8; ++i)
+                bytes[i] = static_cast<uint8_t>((inst >> (i * 8)) & 0xFF);
+            out.write(reinterpret_cast<const char*>(bytes), 8);
+        }
+        out.close();
+
+        std::cout << "[CompilerView] Compiled " << instructions.size()
+            << " instructions to " << outPath << std::endl;
+
+        return true;
     }
-
-    // Si no hay instrucciones, agregar algunas por defecto
-    if (instructions.empty()) {
-        instructions.push_back(0x0100000000000000ULL);  // NOP simulado
-    }
-
-    // Escribir el archivo binario
-    std::string filePath = std::string(RESOURCES_PATH) + "Assets/CPU_TLP/InstMem.bin";
-
-    // Intentar crear el directorio si no existe
-    std::string dirPath = std::string(RESOURCES_PATH) + "Assets/CPU_TLP";
-    MKDIR(dirPath.c_str());
-
-    // Intentar escribir el archivo
-    std::ofstream file(filePath, std::ios::binary | std::ios::trunc);
-
-    if (!file.is_open()) {
-        std::cerr << "[CompilerView] Could not open file for writing: " << filePath << std::endl;
+    catch (const std::exception& e) {
+        std::cerr << "[CompilerView] Compilation failed: " << e.what() << std::endl;
+        m_compileMessage = std::string("Compilation Error: ") + e.what();
         return false;
     }
-
-    // Escribir cada instrucción en formato Little Endian
-    for (uint64_t inst : instructions) {
-        uint8_t bytes[8];
-        for (int i = 0; i < 8; ++i) {
-            bytes[i] = static_cast<uint8_t>((inst >> (i * 8)) & 0xFF);
-        }
-        file.write(reinterpret_cast<const char*>(bytes), 8);
-    }
-
-    file.close();
-
-    std::cout << "[CompilerView] Compiled " << instructions.size()
-        << " instructions to " << filePath << std::endl;
-
-    return true;
 }
 
 void CompilerView::setCompileCallback(std::function<void(const std::string&)> callback) {
@@ -137,7 +139,6 @@ void CompilerView::setCompileCallback(std::function<void(const std::string&)> ca
 }
 
 void CompilerView::update(float dt) {
-    // Actualizar el timer del mensaje
     if (m_messageTimer > 0.0f) {
         m_messageTimer -= dt;
         if (m_messageTimer <= 0.0f) {
@@ -147,21 +148,15 @@ void CompilerView::update(float dt) {
 }
 
 void CompilerView::render() {
-    // Layout básico: editor ocupa todo menos la barra inferior
-    const float BETWEEN = 10.0f; // separación vertical entre editor y barra
-    const float BOTTOM_H = 46.0f; // alto de la barra inferior
+    const float BETWEEN = 10.0f;
+    const float BOTTOM_H = 46.0f;
 
     ImVec2 avail = ImGui::GetContentRegionAvail();
     float editorH = avail.y - BOTTOM_H - BETWEEN;
 
-    // Si hay un mensaje, reservar espacio para mostrarlo
-    if (!m_compileMessage.empty()) {
-        editorH -= 30.0f;
-    }
-
+    if (!m_compileMessage.empty()) editorH -= 30.0f;
     if (editorH < 0.0f) editorH = 0.0f;
 
-    // Asegurar capacidad para edición fluida
     if (m_source.capacity() - m_source.size() < 1024)
         m_source.reserve(m_source.size() + 4096);
 
@@ -179,50 +174,84 @@ void CompilerView::render() {
         (void*)&m_source
     );
 
-    // Mostrar mensaje de compilación si existe
     if (!m_compileMessage.empty()) {
         ImGui::Spacing();
-
-        // Color según el tipo de mensaje
-        if (m_compileMessage.find("Success") != std::string::npos) {
+        if (m_compileMessage.find("Success") != std::string::npos)
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.2f, 1.0f));
-        }
-        else {
+        else
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
-        }
 
         ImGui::TextWrapped("%s", m_compileMessage.c_str());
         ImGui::PopStyleColor();
     }
 
-    // Separación antes de la barra inferior
     ImGui::Dummy(ImVec2(1.0f, BETWEEN));
 
-    // ===== Barra inferior con 3 botones: Load | Save | Compile =====
     const float GAP = 10.0f;
     const float w = (avail.x - 2.0f * GAP) / 3.0f;
     const float h = BOTTOM_H;
 
-    // Botón Load
+    // ========== Botón Load ==========
     if (ImGui::Button("Load", ImVec2(w, h))) {
-        std::cout << "[CompilerView] Load button pressed\n";
-        // TODO: Implementar carga de archivo
+        const char* filters[] = { "*.txt" };
+        const char* filePath = tinyfd_openFileDialog(
+            "Select Assembly Source File",
+            "",
+            1, filters, "Text files (*.txt)",
+            0
+        );
+
+        if (filePath) {
+            std::ifstream file(filePath);
+            if (file.is_open()) {
+                std::ostringstream buffer;
+                buffer << file.rdbuf();
+                m_source = buffer.str();
+                std::cout << "[CompilerView] Loaded file: " << filePath << std::endl;
+                m_compileMessage = std::string("Loaded: ") + filePath;
+            }
+            else {
+                m_compileMessage = "Error: Could not open file.";
+            }
+        }
+        else {
+            std::cout << "[CompilerView] Load cancelled.\n";
+        }
+
+        m_messageTimer = 3.0f;
     }
+
     ImGui::SameLine(0.0f, GAP);
 
-    // Botón Save
+    // ========== Botón Save ==========
     if (ImGui::Button("Save", ImVec2(w, h))) {
-        std::cout << "[CompilerView] Save button pressed\n";
-        // TODO: Implementar guardado de archivo
+        const char* filePath = tinyfd_saveFileDialog(
+            "Save Assembly File",
+            "program.txt",
+            0, nullptr, nullptr
+        );
+
+        if (filePath) {
+            std::ofstream file(filePath);
+            if (file.is_open()) {
+                file << m_source;
+                file.close();
+                m_compileMessage = std::string("Saved: ") + filePath;
+            }
+            else {
+                m_compileMessage = "Error: Could not save file.";
+            }
+        }
+        m_messageTimer = 3.0f;
     }
+
     ImGui::SameLine(0.0f, GAP);
 
-    // Botón Compile (verde)
+    // ========== Botón Compile ==========
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12f, 0.55f, 0.20f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.18f, 0.68f, 0.28f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.09f, 0.45f, 0.16f, 1.0f));
 
-    // Deshabilitar si está compilando
     if (m_isCompiling) {
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
         ImGui::Button("Compiling...", ImVec2(w, h));
@@ -231,23 +260,19 @@ void CompilerView::render() {
     else {
         if (ImGui::Button("Compile", ImVec2(w, h))) {
             m_isCompiling = true;
-
-            // Compilar el código
             bool success = compileToFile(m_source);
 
             if (success) {
                 m_compileMessage = "Compilation Success! Instructions loaded.";
-
-                // Notificar al callback si existe
-                if (m_compileCallback) {
+                if (m_compileCallback)
                     m_compileCallback(m_source);
-                }
             }
             else {
-                m_compileMessage = "Compilation Error: Could not write to InstMem.bin";
+                if (m_compileMessage.empty())
+                    m_compileMessage = "Compilation Error.";
             }
 
-            m_messageTimer = 3.0f; // Mostrar mensaje por 3 segundos
+            m_messageTimer = 3.0f;
             m_isCompiling = false;
         }
     }

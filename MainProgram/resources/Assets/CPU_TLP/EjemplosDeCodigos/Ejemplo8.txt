@@ -1,0 +1,19 @@
+; =======================================================
+; Loop usando NaN y BORD (Branch if Ordered)
+; Lógica invertida: continúa mientras NO sea NaN
+; Resultado esperado: REG1 = 4, REG7 = NaN
+; =======================================================
+MOVI  REG1, #0             ; REG1 = 0 (contador)
+MOVI  REG3, #4             ; REG3 = 4 (límite)
+FMOVI REG5, #0.0           ; REG5 = 0.0
+FMOVI REG6, #0.0           ; REG6 = 0.0
+FDIV  REG7, REG5, REG6     ; REG7 = NaN
+.Loop:
+  ADDI  REG1, REG1, #1     ; i++
+  SUB   REG4, REG1, REG3   ; REG4 = i - 4
+  ASRI  REG4, REG4, #31    ; REG4 = -1 si i<4, 0 si i>=4
+  EORI  REG4, REG4, #-1    ; Invierte: 0 si i<4, 0xFFFFFFFF si i>=4
+  AND   REG2, REG7, REG4   ; REG2 = 0.0 si i<4, NaN si i>=4
+  FCMPS REG2, REG2         ; V=0 si i<4 (ordered); V=1 si i>=4 (unordered)
+  BORD  .Loop              ; Salta si V=0 (ordered, es decir i<4)
+SWI                        ; Estado final: REG1=4, REG2=NaN, REG7=NaN

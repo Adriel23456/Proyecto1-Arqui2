@@ -1,0 +1,11 @@
+; =======================================================
+; Raíz cuadrada de punto flotante
+; Resultado esperado: REG3 = 4.0 (√16.0 = 4.0)
+; =======================================================
+FMOVI REG1, #1.0           ; REG1 = 1.0
+FMOVI REG2, #16.0          ; REG2 = 16.0
+FSQRT REG3, REG2           ; REG3 = √16.0 = 4.0
+NOP
+NOP
+NOP
+SWI                        ; Estado final: REG1=1.0, REG2=16.0, REG3=4.0

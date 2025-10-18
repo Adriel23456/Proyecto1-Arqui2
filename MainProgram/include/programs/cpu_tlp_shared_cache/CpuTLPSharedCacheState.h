@@ -13,6 +13,7 @@ class ICpuTLPView;
 #include "programs/cpu_tlp_shared_cache/components/PE1Component.h"
 #include "programs/cpu_tlp_shared_cache/components/PE2Component.h"
 #include "programs/cpu_tlp_shared_cache/components/PE3Component.h"
+#include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
 
 class CpuTLPSharedCacheState : public State {
 public:
@@ -89,6 +90,7 @@ private:
     std::unique_ptr<cpu_tlp::PE2Component> m_pe2;
     std::unique_ptr<cpu_tlp::PE3Component> m_pe3;
     std::shared_ptr<cpu_tlp::CPUSystemSharedData> m_cpuSystemData;
+    std::unique_ptr<cpu_tlp::SharedMemoryComponent> m_sharedMemoryComponent;
 
     friend class PE0RegView;
     friend class PE1RegView;

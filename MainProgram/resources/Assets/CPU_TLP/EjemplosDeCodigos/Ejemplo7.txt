@@ -1,0 +1,18 @@
+; =======================================================
+; Loop usando NaN y BUN (Branch if Unordered)
+; Usa NaN como bandera para detectar i < 4
+; Resultado esperado: REG1 = 4, REG7 = NaN
+; =======================================================
+MOVI  REG1, #0             ; REG1 = 0 (contador)
+MOVI  REG3, #4             ; REG3 = 4 (límite)
+FMOVI REG5, #0.0           ; REG5 = 0.0
+FMOVI REG6, #0.0           ; REG6 = 0.0
+FDIV  REG7, REG5, REG6     ; REG7 = NaN (0.0/0.0 = NaN)
+.Loop:
+  ADDI  REG1, REG1, #1     ; i++
+  SUB   REG4, REG1, REG3   ; REG4 = i - 4
+  ASRI  REG4, REG4, #31    ; REG4 = -1 (0xFFFFFFFF) si i<4, 0 si i>=4
+  AND   REG2, REG7, REG4   ; REG2 = NaN si i<4, 0.0 si i>=4
+  FCMPS REG2, REG2         ; V=1 para NaN (unordered), V=0 para 0.0
+  BUN   .Loop              ; Salta si V=1 (NaN, es decir i<4)
+SWI                        ; Estado final: REG1=4, REG2=0.0, REG7=NaN

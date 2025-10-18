@@ -1,0 +1,15 @@
+; =======================================================
+; Loop con detección usando ASRI (Arithmetic Shift Right Immediate)
+; Cuenta de 1 a 4 usando máscara aritmética
+; Resultado esperado: REG1 = 4, REG2 = 1
+; =======================================================
+MOVI REG1, #0              ; REG1 = 0 (contador i)
+MOVI REG3, #4              ; REG3 = 4 (límite)
+.Loop:
+  ADDI REG1, REG1, #1      ; i = i + 1
+  SUB  REG2, REG1, REG3    ; REG2 = i - 4 (negativo si i<4, >=0 si i>=4)
+  ASRI REG2, REG2, #31     ; Propaga bit de signo: -1 (0xFFFFFFFF) si i<4, 0 si i>=4
+  ADDI REG2, REG2, #1      ; REG2 = 0 si i<4, 1 si i>=4
+  TEQI REG2, #0            ; Z=1 si REG2==0 (es decir, si i<4)
+  BEQ .Loop                ; Salta si Z=1 (i<4)
+SWI                        ; Estado final: REG1=4, REG2=1, REG3=4
