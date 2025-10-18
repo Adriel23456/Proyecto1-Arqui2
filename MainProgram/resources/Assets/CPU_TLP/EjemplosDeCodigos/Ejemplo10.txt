@@ -1,0 +1,11 @@
+; =======================================================
+; Multiplicación con inmediato
+; Resultado esperado: REG3 = 4 (2 × 2 = 4)
+; =======================================================
+MOVI REG1, #1              ; REG1 = 1
+MOVI REG2, #2              ; REG2 = 2
+MULI REG3, REG2, #2        ; REG3 = REG2 × 2 = 2 × 2 = 4
+NOP
+NOP
+NOP
+SWI                        ; Estado final: REG1=1, REG2=2, REG3=4

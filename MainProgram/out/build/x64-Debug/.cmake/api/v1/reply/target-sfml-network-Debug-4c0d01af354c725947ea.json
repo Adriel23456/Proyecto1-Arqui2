@@ -117,11 +117,11 @@
 			[
 				{
 					"backtrace" : 8,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/include"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/include"
 				},
 				{
 					"backtrace" : 8,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/src"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/src"
 				}
 			],
 			"language" : "CXX",
@@ -171,7 +171,7 @@
 		],
 		"prefix" : 
 		{
-			"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
+			"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
 		}
 	},
 	"name" : "sfml-network",

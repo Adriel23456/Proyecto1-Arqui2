@@ -9,16 +9,8 @@
   },
   "ExpandedNodes": [
     "",
-    "\\include",
-    "\\include\\programs",
-    "\\include\\programs\\cpu_tlp_shared_cache",
-    "\\include\\programs\\cpu_tlp_shared_cache\\views",
-    "\\src",
-    "\\src\\programs",
-    "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components",
-    "\\src\\programs\\cpu_tlp_shared_cache\\views"
+    "\\out\\build"
   ],
-  "SelectedNode": "\\include\\programs\\cpu_tlp_shared_cache\\views\\RAMView.h",
+  "SelectedNode": "\\src",
   "PreviewInSolutionExplorer": false
 }

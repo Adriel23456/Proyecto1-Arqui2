@@ -27,7 +27,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/VC/Tools/MSVC/14.50.35702/bin/Hostx64/x64/lib.exe"
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/lib.exe"
 		},
 		{
 			"name" : "CMAKE_BUILD_TYPE",
@@ -51,7 +51,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "c:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug"
+			"value" : "d:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -63,7 +63,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "4"
+			"value" : "3"
 		},
 		{
 			"name" : "CMAKE_CACHE_MINOR_VERSION",
@@ -75,7 +75,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "1"
+			"value" : "31"
 		},
 		{
 			"name" : "CMAKE_CACHE_PATCH_VERSION",
@@ -87,7 +87,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "1"
+			"value" : "6"
 		},
 		{
 			"name" : "CMAKE_COMMAND",
@@ -99,7 +99,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe"
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe"
 		},
 		{
 			"name" : "CMAKE_CPACK_COMMAND",
@@ -111,7 +111,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cpack.exe"
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cpack.exe"
 		},
 		{
 			"name" : "CMAKE_CTEST_COMMAND",
@@ -123,7 +123,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/ctest.exe"
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/ctest.exe"
 		},
 		{
 			"name" : "CMAKE_CXX_COMPILER",
@@ -135,11 +135,11 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "No help, variable specified on the command line."
+					"value" : "CXX compiler"
 				}
 			],
-			"type" : "FILEPATH",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/VC/Tools/MSVC/14.50.35702/bin/Hostx64/x64/cl.exe"
+			"type" : "STRING",
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe"
 		},
 		{
 			"name" : "CMAKE_CXX_FLAGS",
@@ -247,11 +247,11 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "No help, variable specified on the command line."
+					"value" : "C compiler"
 				}
 			],
-			"type" : "FILEPATH",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/VC/Tools/MSVC/14.50.35702/bin/Hostx64/x64/cl.exe"
+			"type" : "STRING",
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe"
 		},
 		{
 			"name" : "CMAKE_C_FLAGS",
@@ -495,7 +495,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/CMakeFiles/pkgRedirects"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/CMakeFiles/pkgRedirects"
 		},
 		{
 			"name" : "CMAKE_GENERATOR",
@@ -555,7 +555,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram"
 		},
 		{
 			"name" : "CMAKE_INSTALL_BINDIR",
@@ -759,7 +759,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
 		},
 		{
 			"name" : "CMAKE_INSTALL_RUNSTATEDIR",
@@ -839,19 +839,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/VC/Tools/MSVC/14.50.35702/bin/Hostx64/x64/link.exe"
-		},
-		{
-			"name" : "CMAKE_LIST_FILE_NAME",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Name of CMakeLists files to read"
-				}
-			],
-			"type" : "INTERNAL",
-			"value" : "CMakeLists.txt"
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/link.exe"
 		},
 		{
 			"name" : "CMAKE_MAKE_PROGRAM",
@@ -863,7 +851,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"
 		},
 		{
 			"name" : "CMAKE_MODULE_LINKER_FLAGS",
@@ -986,18 +974,6 @@
 			"value" : "1"
 		},
 		{
-			"name" : "CMAKE_PROJECT_COMPAT_VERSION",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : ""
-		},
-		{
 			"name" : "CMAKE_PROJECT_DESCRIPTION",
 			"properties" : 
 			[
@@ -1043,7 +1019,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : ""
+			"value" : "2.6"
 		},
 		{
 			"name" : "CMAKE_PROJECT_VERSION_MAJOR",
@@ -1055,7 +1031,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : ""
+			"value" : "2"
 		},
 		{
 			"name" : "CMAKE_PROJECT_VERSION_MINOR",
@@ -1067,7 +1043,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : ""
+			"value" : "6"
 		},
 		{
 			"name" : "CMAKE_PROJECT_VERSION_PATCH",
@@ -1223,7 +1199,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Program Files/Microsoft Visual Studio/18/Insiders/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1"
+			"value" : "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.31"
 		},
 		{
 			"name" : "CMAKE_SHARED_LINKER_FLAGS",
@@ -1347,7 +1323,7 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "Flags used by the archiver during the creation of static libraries during all build types."
+					"value" : "Flags used by the linker during the creation of static libraries during all build types."
 				}
 			],
 			"type" : "STRING",
@@ -1363,7 +1339,7 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "Flags used by the archiver during the creation of static libraries during DEBUG builds."
+					"value" : "Flags used by the linker during the creation of static libraries during DEBUG builds."
 				}
 			],
 			"type" : "STRING",
@@ -1379,7 +1355,7 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "Flags used by the archiver during the creation of static libraries during MINSIZEREL builds."
+					"value" : "Flags used by the linker during the creation of static libraries during MINSIZEREL builds."
 				}
 			],
 			"type" : "STRING",
@@ -1395,7 +1371,7 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "Flags used by the archiver during the creation of static libraries during RELEASE builds."
+					"value" : "Flags used by the linker during the creation of static libraries during RELEASE builds."
 				}
 			],
 			"type" : "STRING",
@@ -1411,7 +1387,7 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "Flags used by the archiver during the creation of static libraries during RELWITHDEBINFO builds."
+					"value" : "Flags used by the linker during the creation of static libraries during RELWITHDEBINFO builds."
 				}
 			],
 			"type" : "STRING",
@@ -1587,7 +1563,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "[C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/flac.lib][C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers][v()]"
+			"value" : "[D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/flac.lib][D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers][v()]"
 		},
 		{
 			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenAL",
@@ -1599,7 +1575,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "[C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/openal32.lib][C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/AL][v()]"
+			"value" : "[D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/openal32.lib][D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/AL][v()]"
 		},
 		{
 			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenGL",
@@ -1611,7 +1587,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "[opengl32][ ][v()]"
+			"value" : "[opengl32][c ][v()]"
 		},
 		{
 			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_VORBIS",
@@ -1623,7 +1599,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "[C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbisenc.lib;C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbisfile.lib;C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbis.lib;C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/ogg.lib][C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers][C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers][v()]"
+			"value" : "[D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbisenc.lib;D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbisfile.lib;D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbis.lib;D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/ogg.lib][D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers][D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers][v()]"
 		},
 		{
 			"name" : "FLAC_INCLUDE_DIR",
@@ -1639,7 +1615,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers"
 		},
 		{
 			"name" : "FLAC_LIBRARY",
@@ -1655,7 +1631,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/flac.lib"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/flac.lib"
 		},
 		{
 			"name" : "FREETYPE_INCLUDE_DIR_freetype2",
@@ -1671,7 +1647,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/freetype2"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/freetype2"
 		},
 		{
 			"name" : "FREETYPE_INCLUDE_DIR_ft2build",
@@ -1687,7 +1663,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/freetype2"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/freetype2"
 		},
 		{
 			"name" : "FREETYPE_LIBRARY",
@@ -1703,7 +1679,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/freetype.lib"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/freetype.lib"
 		},
 		{
 			"name" : "HAVE_SIZEOF_VOID_PTR",
@@ -1763,7 +1739,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/imgui-docking/imgui"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/imgui-docking/imgui"
 		},
 		{
 			"name" : "IMGUI_SFML_CONFIG_DIR",
@@ -1775,7 +1751,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/imgui-sfml-2.6.x"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/imgui-sfml-2.6.x"
 		},
 		{
 			"name" : "IMGUI_SFML_CONFIG_INSTALL_DIR",
@@ -1863,7 +1839,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers"
 		},
 		{
 			"name" : "OGG_LIBRARY",
@@ -1879,7 +1855,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/ogg.lib"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/ogg.lib"
 		},
 		{
 			"name" : "OPENAL_INCLUDE_DIR",
@@ -1895,7 +1871,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/AL"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/AL"
 		},
 		{
 			"name" : "OPENAL_LIBRARY",
@@ -1911,7 +1887,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/openal32.lib"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/openal32.lib"
 		},
 		{
 			"name" : "OPENGL_gl_LIBRARY",
@@ -1967,7 +1943,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/SFML-2.6.1"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/SFML-2.6.1"
 		},
 		{
 			"name" : "SFML_BUILD_AUDIO",
@@ -2111,7 +2087,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1"
 		},
 		{
 			"name" : "SFML_USE_STATIC_STD_LIBS",
@@ -2163,7 +2139,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbisenc.lib"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbisenc.lib"
 		},
 		{
 			"name" : "VORBISFILE_LIBRARY",
@@ -2179,7 +2155,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbisfile.lib"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbisfile.lib"
 		},
 		{
 			"name" : "VORBIS_INCLUDE_DIR",
@@ -2195,7 +2171,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers"
 		},
 		{
 			"name" : "VORBIS_LIBRARY",
@@ -2211,7 +2187,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbis.lib"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/libs-msvc-universal/x64/vorbis.lib"
 		},
 		{
 			"name" : "WARNINGS_AS_ERRORS",
@@ -2235,7 +2211,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
 		},
 		{
 			"name" : "glad_BINARY_DIR",
@@ -2247,7 +2223,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/glad"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/glad"
 		},
 		{
 			"name" : "glad_IS_TOP_LEVEL",
@@ -2271,7 +2247,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/glad"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/glad"
 		},
 		{
 			"name" : "imgui_BINARY_DIR",
@@ -2283,7 +2259,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/imgui-docking"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/imgui-docking"
 		},
 		{
 			"name" : "imgui_IS_TOP_LEVEL",
@@ -2307,7 +2283,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/imgui-docking"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/imgui-docking"
 		},
 		{
 			"name" : "imgui_sfml_BINARY_DIR",
@@ -2319,7 +2295,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/imgui-sfml-2.6.x"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/imgui-sfml-2.6.x"
 		},
 		{
 			"name" : "imgui_sfml_IS_TOP_LEVEL",
@@ -2343,7 +2319,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/imgui-sfml-2.6.x"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/imgui-sfml-2.6.x"
 		},
 		{
 			"name" : "mygame_BINARY_DIR",
@@ -2355,7 +2331,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug"
 		},
 		{
 			"name" : "mygame_IS_TOP_LEVEL",
@@ -2379,7 +2355,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram"
 		},
 		{
 			"name" : "nlohmann_BINARY_DIR",
@@ -2391,7 +2367,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/nlohmann"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/thirdparty/nlohmann"
 		},
 		{
 			"name" : "nlohmann_IS_TOP_LEVEL",
@@ -2415,7 +2391,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/nlohmann"
+			"value" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/nlohmann"
 		},
 		{
 			"name" : "sfml-audio_LIB_DEPENDS",

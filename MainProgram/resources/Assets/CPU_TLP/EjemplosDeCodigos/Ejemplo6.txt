@@ -1,0 +1,12 @@
+; =======================================================
+; Loop usando BGT (comparación invertida)
+; Cuenta de 1 a 4 (compara 4 > REG1)
+; Resultado esperado: REG1 = 4, REG3 = 4
+; =======================================================
+MOVI REG1, #0              ; REG1 = 0 (contador)
+MOVI REG3, #4              ; REG3 = 4 (límite)
+.Loop:
+  ADDI REG1, REG1, #1      ; REG1++
+  CMP  REG3, REG1          ; Compara 4 con REG1
+  BGT .Loop                ; Salta si 4 > REG1 (es decir, REG1 < 4)
+SWI                        ; Estado final: REG1=4, REG3=4

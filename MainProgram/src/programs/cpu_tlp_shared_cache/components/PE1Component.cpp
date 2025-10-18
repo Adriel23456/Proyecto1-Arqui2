@@ -67,9 +67,15 @@ namespace cpu_tlp {
     }
 
     void PE1Component::RegisterFile::reset() {
-        regs.fill(0ULL);
-        regs[11] = 0xFFFFFFFFFFFFFFFFULL; // LOWER_REG
-        regs[9] = 0ULL; // PEID
+        // Reset todos los registros EXCEPTO PEID (regs[9])
+        for (int i = 0; i < 12; ++i) {
+            if (i == 9) continue;  // ← NO tocar PEID, preservar valor actual
+            regs[i] = 0ULL;
+        }
+
+        // Configurar registros especiales
+        regs[10] = 0x0000000000000000ULL;  // UPPER_REG = 0
+        regs[11] = 0xFFFFFFFFFFFFFFFFULL;  // LOWER_REG = 0xFFFFFFFFFFFFFFFFULL
     }
 
     uint64_t PE1Component::RegisterFile::read(uint8_t addr) const {
@@ -895,6 +901,13 @@ namespace cpu_tlp {
                 m_sharedData->pe_registers[m_pe_id].registers[addr].store(value, std::memory_order_release);
             }
             };
+
+        // AGREGAR: Sincronización inicial del snapshot completo
+        for (int i = 0; i < 12; ++i) {
+            uint64_t val = m_registerFile.read(i);
+            m_sharedData->pe_registers[m_pe_id].registers[i].store(val, std::memory_order_release);
+        }
+
         // Reset de control
         auto& ctrl = m_sharedData->pe_control[m_pe_id];
         ctrl.command.store(0, std::memory_order_release);
@@ -971,10 +984,13 @@ namespace cpu_tlp {
 
         m_hazards = {};
 
+        // ← AGREGAR ESTA LÍNEA CRÍTICA
+        m_hazardUnit.reset();
+
         // Reset tracking de instrucciones (local)
         m_stageInstructions.fill(NOP_INSTRUCTION);
 
-        // AGREGAR: Sincronizar tracking de instrucciones con SharedData
+        // Sincronizar tracking de instrucciones con SharedData
         if (m_sharedData) {
             for (int i = 0; i < 5; ++i) {
                 m_sharedData->pe_instruction_tracking[m_pe_id].stage_instructions[i].store(

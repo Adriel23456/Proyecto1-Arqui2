@@ -140,6 +140,15 @@ namespace cpu_tlp {
                 bool BranchE,
                 uint8_t BranchOp_E
             );
+
+            void reset() {
+                inMemoryOperation = false;
+                ackSent = false;
+                branchActive = false;
+                branchCycles = 0;
+                branchWaitingForW = false;
+            }
+
         private:
             int branchCycles = 0;
             bool branchActive = false;

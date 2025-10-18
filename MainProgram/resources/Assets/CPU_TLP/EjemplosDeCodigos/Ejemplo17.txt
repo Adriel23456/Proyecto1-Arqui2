@@ -1,0 +1,8 @@
+; =======================================================
+; Comparación CMP (registros enteros)
+; Resultado esperado: Flags Z=1, N=0, C=1, V=0 (son iguales)
+; =======================================================
+MOVI REG1, #16             ; REG1 = 16
+MOVI REG2, #16             ; REG2 = 16
+CMP REG1, REG2             ; Compara 16 con 16: son iguales → Z=1
+SWI                        ; Estado final: REG1=16, REG2=16, Flags: Z=1

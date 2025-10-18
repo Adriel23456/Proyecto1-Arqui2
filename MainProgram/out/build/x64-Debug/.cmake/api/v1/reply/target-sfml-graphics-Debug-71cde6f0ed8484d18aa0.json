@@ -145,26 +145,26 @@
 			[
 				{
 					"backtrace" : 9,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/include"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/include"
 				},
 				{
 					"backtrace" : 9,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/src"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/src"
 				},
 				{
 					"backtrace" : 10,
 					"isSystem" : true,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/stb_image"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/stb_image"
 				},
 				{
 					"backtrace" : 11,
 					"isSystem" : true,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/glad/include"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/glad/include"
 				},
 				{
 					"backtrace" : 12,
 					"isSystem" : true,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/freetype2"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/freetype2"
 				}
 			],
 			"language" : "CXX",
@@ -238,7 +238,7 @@
 		],
 		"prefix" : 
 		{
-			"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
+			"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
 		}
 	},
 	"name" : "sfml-graphics",

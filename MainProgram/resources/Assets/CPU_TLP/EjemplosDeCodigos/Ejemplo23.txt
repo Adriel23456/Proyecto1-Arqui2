@@ -1,0 +1,12 @@
+; =======================================================
+; LDR sin offset (cargar desde memoria)
+; Carga en REG1 el valor de memoria[16] (probablemente 0)
+; Resultado esperado: REG1 = valor_en_memoria[16] (depende del estado inicial)
+; =======================================================
+FMOVI REG1, #16.0          ; REG1 = 16.0
+MOVI REG2, #16             ; REG2 = 16 (dirección base)
+LDR REG1, [REG2]           ; REG1 = Memoria[16] (probablemente 0 si no se inicializó)
+NOP
+NOP
+NOP
+SWI                        ; Estado final: REG1=Memoria[16], REG2=16

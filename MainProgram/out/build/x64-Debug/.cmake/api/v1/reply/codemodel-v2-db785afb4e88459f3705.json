@@ -314,70 +314,70 @@
 				{
 					"directoryIndex" : 10,
 					"id" : "ImGui-SFML::@822bc0e04484a3b610c8",
-					"jsonFile" : "target-ImGui-SFML-Debug-6d9fc31f1c8020a19aa8.json",
+					"jsonFile" : "target-ImGui-SFML-Debug-195917db8a415492d67c.json",
 					"name" : "ImGui-SFML",
 					"projectIndex" : 3
 				},
 				{
 					"directoryIndex" : 11,
 					"id" : "glad::@140c1f658771f9cc4abc",
-					"jsonFile" : "target-glad-Debug-b3789b65bd0a0f1f22a9.json",
+					"jsonFile" : "target-glad-Debug-27f88f129f1606b2694e.json",
 					"name" : "glad",
 					"projectIndex" : 4
 				},
 				{
 					"directoryIndex" : 9,
 					"id" : "imgui::@0e4bebfa6e0abb85058b",
-					"jsonFile" : "target-imgui-Debug-d9c203a4e0e50e5f9554.json",
+					"jsonFile" : "target-imgui-Debug-1b544d9470c50d9e3f85.json",
 					"name" : "imgui",
 					"projectIndex" : 2
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "mygame::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-mygame-Debug-af2ab294bd0eebb2aa66.json",
+					"jsonFile" : "target-mygame-Debug-ed9fbfba9024404ce471.json",
 					"name" : "mygame",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 8,
 					"id" : "sfml-audio::@bf0c5d179bfb42057647",
-					"jsonFile" : "target-sfml-audio-Debug-7f7bccd406b961604cfc.json",
+					"jsonFile" : "target-sfml-audio-Debug-b8b6dd369a4dd3f70885.json",
 					"name" : "sfml-audio",
 					"projectIndex" : 1
 				},
 				{
 					"directoryIndex" : 7,
 					"id" : "sfml-graphics::@0854713711bb86ec134b",
-					"jsonFile" : "target-sfml-graphics-Debug-57f7a3c4e50be4aa32ec.json",
+					"jsonFile" : "target-sfml-graphics-Debug-71cde6f0ed8484d18aa0.json",
 					"name" : "sfml-graphics",
 					"projectIndex" : 1
 				},
 				{
 					"directoryIndex" : 4,
 					"id" : "sfml-main::@9f23af688163a8aa374e",
-					"jsonFile" : "target-sfml-main-Debug-2278cd6d131f797e5d97.json",
+					"jsonFile" : "target-sfml-main-Debug-8f2103423a326b150ca5.json",
 					"name" : "sfml-main",
 					"projectIndex" : 1
 				},
 				{
 					"directoryIndex" : 6,
 					"id" : "sfml-network::@857784478369b20e4cdf",
-					"jsonFile" : "target-sfml-network-Debug-28ef3f93fb99909708b1.json",
+					"jsonFile" : "target-sfml-network-Debug-4c0d01af354c725947ea.json",
 					"name" : "sfml-network",
 					"projectIndex" : 1
 				},
 				{
 					"directoryIndex" : 3,
 					"id" : "sfml-system::@8216cee0a63fa72c04bf",
-					"jsonFile" : "target-sfml-system-Debug-86dcd9aa8c3726aac10e.json",
+					"jsonFile" : "target-sfml-system-Debug-08b1d699f8e31b9712da.json",
 					"name" : "sfml-system",
 					"projectIndex" : 1
 				},
 				{
 					"directoryIndex" : 5,
 					"id" : "sfml-window::@83909330983a723b4f9b",
-					"jsonFile" : "target-sfml-window-Debug-4b9bb20d105d15a4a689.json",
+					"jsonFile" : "target-sfml-window-Debug-2a37b2ed103b27135d62.json",
 					"name" : "sfml-window",
 					"projectIndex" : 1
 				}
@@ -387,8 +387,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug",
-		"source" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram"
+		"build" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug",
+		"source" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram"
 	},
 	"version" : 
 	{

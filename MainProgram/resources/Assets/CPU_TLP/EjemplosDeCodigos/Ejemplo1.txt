@@ -1,0 +1,15 @@
+; =======================================================
+; PRUEBA 1: Suma de 1 a 10 (Resultado esperado en REG2: 55)
+; =======================================================
+MOVI REG1, #1        ; REG1 = 1 (Contador 'i')
+MOVI REG2, #0        ; REG2 = 0 (Acumulador de suma)
+MOVI REG3, #11       ; REG3 = 11 (Lmite: terminar cuando i == 11)
+
+.LOOP_START:
+    ADD  REG2, REG2, REG1    ; REG2 = REG2 + REG1 (Acumulador += i)
+    ADDI REG1, REG1, #1      ; REG1 = REG1 + 1    (i++)
+    
+    CMPI REG1, #11           ; Compara REG1 con 11
+    BLT  .LOOP_START         ; Si REG1 < 11, ir a .LOOP_START
+
+SWI                          ; Fin de la primera seccin para inspeccion

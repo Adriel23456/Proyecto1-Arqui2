@@ -1,0 +1,21 @@
+; =======================================================
+; PRUEBA 2: Comparación y Salto
+; =======================================================
+MOVI REG4, #55           ; REG4 = 55 (Valor de comparación)
+SUB  REG8, REG2, REG4    ; REG8 = REG2 - REG4
+CMPI REG8, #0            ; Compara REG8 con 0
+BEQ  .EQUAL_LABEL        ; Si Z=1 (REG8==0), salta a .EQUAL_LABEL
+; Si no son iguales
+B    .NOTEQUAL_LABEL     ; ← CAMBIAR BUN por B (salto incondicional)
+.EQUAL_LABEL:
+    MOVI REG5, #1        ; Bandera de éxito REG5 = 1
+    B .END_LABEL
+.NOTEQUAL_LABEL:
+    MOVI REG5, #0        ; Bandera de fallo REG5 = 0
+    B .END_LABEL
+.END_LABEL:
+NOP
+NOP
+NOP
+NOP
+SWI

@@ -143,20 +143,20 @@
 			[
 				{
 					"backtrace" : 9,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/include"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/include"
 				},
 				{
 					"backtrace" : 9,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/src"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/src"
 				},
 				{
 					"backtrace" : 10,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/vulkan"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/vulkan"
 				},
 				{
 					"backtrace" : 11,
 					"isSystem" : true,
-					"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/glad/include"
+					"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/thirdparty/SFML-2.6.1/extlibs/headers/glad/include"
 				}
 			],
 			"language" : "CXX",
@@ -222,7 +222,7 @@
 		],
 		"prefix" : 
 		{
-			"path" : "C:/Users/andre/Desktop/ArquiII/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
+			"path" : "D:/Escritorio/Informacion-de-Prioridad/TEC/2025/Semestre2/Arqui2/Evaluaciones/Proyecto1/Proyecto1-Arqui2/MainProgram/out/install/x64-Debug"
 		}
 	},
 	"name" : "sfml-window",

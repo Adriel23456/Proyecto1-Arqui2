@@ -1,0 +1,11 @@
+; =======================================================
+; Multiplicación de punto flotante
+; Resultado esperado: REG3 = 2.0 (1.0 × 2.0 = 2.0)
+; =======================================================
+FMOVI REG1, #1.0           ; REG1 = 1.0
+FMOVI REG2, #2.0           ; REG2 = 2.0
+FMUL REG3, REG1, REG2      ; REG3 = 1.0 × 2.0 = 2.0
+NOP
+NOP
+NOP
+SWI                        ; Estado final: REG1=1.0, REG2=2.0, REG3=2.0

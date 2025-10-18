@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <atomic>
+#include <array>  // AÑADIR ESTE INCLUDE
 
 namespace cpu_tlp {
 
@@ -13,9 +14,7 @@ namespace cpu_tlp {
         InstructionMemoryComponent();
         ~InstructionMemoryComponent();
 
-        // CAMBIO: Ahora recibe CPUSystemSharedData en lugar de InstructionMemorySharedData
         bool initialize(std::shared_ptr<CPUSystemSharedData> sharedData);
-
         void shutdown();
         bool isRunning() const;
         bool reloadInstructionMemory();
@@ -30,7 +29,6 @@ namespace cpu_tlp {
         uint64_t bytesToUint64LittleEndian(const uint8_t* bytes);
 
     private:
-        // CAMBIO: Ahora usa CPUSystemSharedData
         std::shared_ptr<CPUSystemSharedData> m_sharedData;
         std::unique_ptr<std::thread> m_executionThread;
 
@@ -38,6 +36,9 @@ namespace cpu_tlp {
         size_t m_memorySize;
         bool m_isRunning;
         std::atomic<bool> m_processingPaused;
+
+        // AÑADIR ESTA LÍNEA: Convertir lastPC en variable miembro
+        std::array<uint64_t, 4> m_lastPC;
 
         static constexpr uint64_t ERROR_INSTRUCTION = 0x4D00000000000000ULL;
         static constexpr const char* INSTRUCTION_FILE_PATH = "Assets/CPU_TLP/InstMem.bin";
