@@ -3,6 +3,22 @@
   "WorkspaceRootPath": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
@@ -70,37 +86,76 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "InterconnectComponent.cpp",
+              "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.cpp",
+              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.cpp",
+              "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.cpp",
+              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-10-19T14:25:24.542Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "InterconnectComponent.h",
+              "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.h",
+              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.h",
+              "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.h",
+              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.h",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAABMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-10-19T14:19:30.001Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "L1Component.cpp",
+              "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.cpp",
+              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.cpp",
+              "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.cpp",
+              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-10-19T14:14:06.796Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "L1Component.h",
+              "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.h",
+              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.h",
+              "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.h",
+              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\cash\\L1Component.h",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABkAAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-10-19T14:12:00.687Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "interconnect_bus.h",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
               "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
               "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
               "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
-              "ViewState": "AgIAADsAAAAAAAAAAAAmwFcAAAAVAAAAAAAAAA==",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAAFcAAAAVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2025-10-19T05:48:16.368Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "InstructionMemoryComponent.cpp",
-              "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
-              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
-              "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
-              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
-              "ViewState": "AgIAAJgAAAAAAAAAAAAmwLwAAAAWAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-19T01:06:57.353Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 8,
               "Title": "InstructionMemoryComponent.h",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.h",
               "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.h",
@@ -108,12 +163,11 @@
               "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.h",
               "ViewState": "AgIAAAoAAAAAAAAAAAAmwC4AAAAWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-19T01:06:32.576Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T01:06:32.576Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 11,
               "Title": "CpuTLPControlAPI.h",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\CpuTLPControlAPI.h",
               "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\CpuTLPControlAPI.h",
@@ -121,12 +175,36 @@
               "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\CpuTLPControlAPI.h",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-19T01:04:35.343Z",
+              "WhenOpened": "2025-10-19T01:04:35.343Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "interconnect_bus.cpp",
+              "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
+              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
+              "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
+              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAAABMAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-10-19T00:37:18.41Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 7,
+              "Title": "InstructionMemoryComponent.cpp",
+              "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
+              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
+              "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
+              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\InstructionMemoryComponent.cpp",
+              "ViewState": "AgIAAJgAAAAAAAAAAAAmwLwAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-10-19T01:06:57.353Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
               "Title": "MemCacheTable.cpp",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\widgets\\MemCacheTable.cpp",
               "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\widgets\\MemCacheTable.cpp",
@@ -134,12 +212,11 @@
               "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\widgets\\MemCacheTable.cpp",
               "ViewState": "AgIAAFUAAAAAAAAAAAAmwHkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-19T01:02:27.922Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T01:02:27.922Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 10,
               "Title": "CpuTLPSharedCacheState.h",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h",
               "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h",
@@ -147,12 +224,11 @@
               "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h",
               "ViewState": "AgIAAEYAAAAAAAAAAAAmwGoAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-19T00:59:07.271Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T00:59:07.271Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 6,
               "Title": "l1_cash.h",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h",
               "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h",
@@ -160,25 +236,11 @@
               "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h",
               "ViewState": "AgIAADoAAAAAAAAAAAAWwFYAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-19T00:38:31.074Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T00:38:31.074Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "interconnect_bus.cpp",
-              "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
-              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
-              "ToolTip": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
-              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAgAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-19T00:37:18.41Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 13,
               "Title": "MemCacheTable.h",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\widgets\\MemCacheTable.h",
               "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\widgets\\MemCacheTable.h",
@@ -186,12 +248,11 @@
               "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\widgets\\MemCacheTable.h",
               "ViewState": "AgIAABAAAAAAAAAAAAAmwDQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-19T01:02:07.618Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T01:02:07.618Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 14,
               "Title": "SharedData.h",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\SharedData.h",
               "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\SharedData.h",
@@ -199,12 +260,11 @@
               "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\SharedData.h",
               "ViewState": "AgIAAEAAAAAAAAAAAAAmwGQAAAAWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-19T01:00:48.682Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T01:00:48.682Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 15,
               "Title": "l1_snoop.cpp",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp",
               "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp",
@@ -212,12 +272,11 @@
               "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp",
               "ViewState": "AgIAABMAAAAAAAAAAAAcwC0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-19T00:37:08.656Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T00:37:08.656Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 16,
               "Title": "l1_fsm.cpp",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp",
               "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp",
@@ -225,12 +284,11 @@
               "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp",
               "ViewState": "AgIAAPAAAAAAAAAAAAAcwAoBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-19T00:36:28.497Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T00:36:28.497Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 9,
               "Title": "CpuTLPSharedCacheState.cpp",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp",
               "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp",
@@ -238,12 +296,11 @@
               "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.cpp",
               "ViewState": "AgIAAIUCAAAAAAAAAAAmwKkCAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-19T00:25:27.397Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T00:25:27.397Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 17,
               "Title": "l1_cash.cpp",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.cpp",
               "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.cpp",
@@ -251,12 +308,11 @@
               "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.cpp",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-19T00:36:26.572Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T00:36:26.572Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 18,
               "Title": "State.cpp",
               "DocumentMoniker": "D:\\LocalProjects\\Proyecto1-Arqui2\\MainProgram\\src\\core\\State.cpp",
               "RelativeDocumentMoniker": "src\\core\\State.cpp",
@@ -264,16 +320,15 @@
               "RelativeToolTip": "src\\core\\State.cpp",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-18T19:12:32.891Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+              "WhenOpened": "2025-10-18T19:12:32.891Z"
             },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
             }
           ]
         }

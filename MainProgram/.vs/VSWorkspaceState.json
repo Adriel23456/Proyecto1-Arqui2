@@ -12,13 +12,14 @@
     "\\include",
     "\\include\\programs",
     "\\include\\programs\\cpu_tlp_shared_cache",
-    "\\include\\programs\\cpu_tlp_shared_cache\\utils",
-    "\\include\\programs\\cpu_tlp_shared_cache\\widgets",
+    "\\include\\programs\\cpu_tlp_shared_cache\\components",
+    "\\include\\programs\\cpu_tlp_shared_cache\\components\\bus",
     "\\src",
     "\\src\\programs",
     "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\widgets"
+    "\\src\\programs\\cpu_tlp_shared_cache\\components",
+    "\\src\\programs\\cpu_tlp_shared_cache\\components\\bus"
   ],
-  "SelectedNode": "\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
+  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\InterconnectComponent.cpp",
   "PreviewInSolutionExplorer": false
 }
