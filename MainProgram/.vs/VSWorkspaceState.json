@@ -9,8 +9,16 @@
   },
   "ExpandedNodes": [
     "",
-    "\\include\\programs\\cpu_tlp_shared_cache"
+    "\\include",
+    "\\include\\programs",
+    "\\include\\programs\\cpu_tlp_shared_cache",
+    "\\include\\programs\\cpu_tlp_shared_cache\\utils",
+    "\\include\\programs\\cpu_tlp_shared_cache\\widgets",
+    "\\src",
+    "\\src\\programs",
+    "\\src\\programs\\cpu_tlp_shared_cache",
+    "\\src\\programs\\cpu_tlp_shared_cache\\widgets"
   ],
-  "SelectedNode": "\\src",
+  "SelectedNode": "\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
   "PreviewInSolutionExplorer": false
 }
