@@ -1,4 +1,5 @@
 #pragma once
+#include "l1_cash.h"
 #include <array>
 #include <cstdint>
 

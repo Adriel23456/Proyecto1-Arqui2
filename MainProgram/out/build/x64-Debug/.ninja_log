@@ -179,3 +179,15 @@
 108	214	7825170035190370	clean	8c45b54705a541e8
 14442	15206	7825170282441673	thirdparty/SFML-2.6.1/src/SFML/Main/CMakeFiles/sfml-main.dir/MainWin32.cpp.obj	65adc5ae920eaede
 15206	15253	7825170290081549	thirdparty/SFML-2.6.1/lib/sfml-main-d.lib	d188572dd3df8ccc
+118	166	7826357329488236	D:/LocalProjects/Proyecto1-Arqui2/MainProgram/out/build/x64-Debug/CMakeFiles/cmake.verify_globs	77f176ce9e173fc6
+231	951	7826357330598265	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/cash/l1_cash.cpp.obj	3931ec8f4db694d2
+241	955	7826357330708379	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/cash/l1_snoop.cpp.obj	5095a39a8ae0e092
+247	958	7826357330758277	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/cash/l1_utils.cpp.obj	a0c3128bbc49a21f
+236	1121	7826357330658290	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/cash/l1_fsm.cpp.obj	43de05be6b77bb26
+220	1127	7826357330498306	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.cpp.obj	47de05172460f9d2
+225	1319	7826357330548265	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/cash/L1Component.cpp.obj	43e3f70031d3f290
+206	1355	7826357330348265	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/SharedMemory.cpp.obj	d615961c9823a6d8
+215	1391	7826357330448331	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/bus/InterconnectComponent.cpp.obj	c5833979684fa566
+210	1423	7826357330398274	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.cpp.obj	6feb7aa3a8acf75d
+201	1776	7826357330308233	CMakeFiles/mygame.dir/src/programs/cpu_tlp_shared_cache/CpuTLPSharedCacheState.cpp.obj	8d0c501af8e3cd7b
+1777	4103	7826357346065537	mygame.exe	3fce989d7ce08c0

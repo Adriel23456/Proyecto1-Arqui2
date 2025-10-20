@@ -27,6 +27,9 @@
 #include <imgui.h>
 #include <iostream>
 #include <memory>
+#include <algorithm>
+#include <string>
+
 
 CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindow* win)
     : State(sm, win) {

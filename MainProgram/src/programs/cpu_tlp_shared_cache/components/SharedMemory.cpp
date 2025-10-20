@@ -153,8 +153,15 @@ bool SharedMemory::loadFromFile(const std::string& path, uint16_t startAddr, siz
     }
     file.seekg(0, std::ios::beg);
 
-    // Si el archivo es mayor a 4096 bytes, solo leer los primeros 4096
-    size_t bytesToRead = std::min<size_t>(static_cast<size_t>(fileSize), MEM_SIZE_BYTES);
+
+
+    // Capacidad real desde startAddr (en bytes)
+    if (startAddr >= MEM_SIZE_BYTES) {
+        std::cerr << "[SharedMemory] startAddr out of range\n";
+        return false;
+    }
+    const size_t capacityFromStart = MEM_SIZE_BYTES - startAddr;
+    const size_t bytesToRead = static_cast<size_t>(std::min<std::streamsize>(fileSize, static_cast<std::streamsize>(capacityFromStart)));
 
     std::vector<uint8_t> buffer(bytesToRead);
     if (!file.read(reinterpret_cast<char*>(buffer.data()), bytesToRead)) {
@@ -162,69 +169,50 @@ bool SharedMemory::loadFromFile(const std::string& path, uint16_t startAddr, siz
         return false;
     }
 
-    // Guardar en memoria con mutex
     {
         std::lock_guard<std::mutex> lock(memMutex);
 
-        if (startAddr >= MEM_SIZE_BYTES) {
-            std::cerr << "[SharedMemory] startAddr out of range\n";
-            return false;
-        }
-
-        // Resetear toda la memoria a 0x0
+        // Reset total y log
         std::fill(memory.begin(), memory.end(), 0);
         accessLog.clear();
 
-        // Calcular cuántos bytes podemos escribir
-        size_t availableBytes = MEM_SIZE_BYTES - startAddr;
-        size_t bytesToWrite = std::min(bytesToRead, availableBytes);
-        size_t totalWords = (bytesToWrite + align - 1) / align;
-        uint16_t startWordIndex = startAddr / align;
+        // Escribir byte a byte en layout de 64-bit words (little-endian por byte)
+        for (size_t i = 0; i < bytesToRead; ++i) {
+            const uint16_t byteAddr = static_cast<uint16_t>(startAddr + i);
+            const uint16_t wordIndex = byteAddr / 8;
+            const uint8_t  byteOff = byteAddr % 8;
 
-        // Asegurar que no excedemos el tamaño de la memoria
-        if (startWordIndex + totalWords > MEM_SIZE_WORDS) {
-            totalWords = MEM_SIZE_WORDS - startWordIndex;
-        }
+            const uint64_t mask = ~(0xFFULL << (byteOff * 8));
+            const uint64_t v = static_cast<uint64_t>(buffer[i]) << (byteOff * 8);
+            memory[wordIndex] = (memory[wordIndex] & mask) | v;
 
-        // Cargar los datos del archivo
-        size_t byteIndex = 0;
-        for (size_t i = 0; i < totalWords; ++i) {
-            uint64_t value = 0;
-            size_t chunk = std::min<size_t>(align, buffer.size() - byteIndex);
-
-            // Copiar bytes en little-endian
-            for (size_t b = 0; b < chunk; ++b) {
-                value |= (uint64_t(buffer[byteIndex + b]) << (8 * b));
+            // Opcional: logear cuando completamos un word o al final
+            const bool completedWord = (byteOff == 7) || (i + 1 == bytesToRead);
+            if (completedWord) {
+                accessLog.push_back({ "LOAD", static_cast<uint16_t>(wordIndex * 8), memory[wordIndex] });
             }
-
-            uint16_t wordIndex = startWordIndex + static_cast<uint16_t>(i);
-            memory[wordIndex] = value;
-
-            // Log con dirección en bytes
-            uint16_t byteAddress = wordIndex * 8;
-            accessLog.push_back({ "LOAD", byteAddress, value });
-
-            byteIndex += chunk;
-            if (byteIndex >= buffer.size()) break;
         }
 
-        std::cout << "[SharedMemory] Loaded " << bytesToWrite << " bytes from " << path
+        // Mensaje de resultado
+        std::cout << "[SharedMemory] Loaded " << bytesToRead << " bytes from " << path
             << " at byte address " << startAddr;
 
-        if (bytesToRead < MEM_SIZE_BYTES) {
-            size_t zeroFilledBytes = MEM_SIZE_BYTES - bytesToRead;
-            std::cout << " (filled " << zeroFilledBytes << " remaining bytes with 0x0)";
+        if (static_cast<size_t>(fileSize) > bytesToRead) {
+            // Recortado por falta de espacio
+            std::cout << " (truncated " << (static_cast<size_t>(fileSize) - bytesToRead) << " bytes)";
         }
-        else if (static_cast<size_t>(fileSize) > MEM_SIZE_BYTES) {
-            size_t truncatedBytes = static_cast<size_t>(fileSize) - MEM_SIZE_BYTES;
-            std::cout << " (truncated " << truncatedBytes << " bytes)";
+        else if (startAddr > 0 || bytesToRead < MEM_SIZE_BYTES) {
+            // Quedó cero-fill en el resto
+            const size_t zeroFilledBytes = MEM_SIZE_BYTES - bytesToRead - startAddr;
+            if (zeroFilledBytes > 0)
+                std::cout << " (filled " << zeroFilledBytes << " remaining bytes with 0x0)";
         }
-
         std::cout << "\n";
     }
 
     return true;
 }
+
 
 // ================== log utils ==================
 void SharedMemory::clearLog() {

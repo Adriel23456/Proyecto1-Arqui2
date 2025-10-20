@@ -1,6 +1,7 @@
 #include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h"
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"
 #include "programs/cpu_tlp_shared_cache/components/SharedData.h" // cpu_tlp::RAMConnection
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
 
 // --- helpers de dirección ---
 static inline uint64_t align_to_line(uint64_t a) {
@@ -9,20 +10,19 @@ static inline uint64_t align_to_line(uint64_t a) {
 }
 
 uint16_t Interconnect::idx64(uint64_t addr_line) {
-    // Nota: asume ventana de 4 KiB (0x000..0xFFF) para demo;
-    // si tu memoria es mayor, sustituye este mapeo por el apropiado.
-    return static_cast<uint16_t>((addr_line & 0xFFFULL) >> 3); // /8
+    // 4 KiB de ventana => devolver base EN BYTES (no /8)
+    return static_cast<uint16_t>(addr_line & 0xFFFULL);
 }
 
 // --- limpieza de salidas por ciclo ---
 void Interconnect::clearOutputs() {
+    const bool can_accept_wb = !(tx_.busy && tx_.mem != ActiveTx::MemPhase::None);
     for (auto& o : b2m_) {
-        o.B_SHARED_SEEN = false;
-        o.B_HITM_SEEN = false;
-        o.B_RVALID = false;
-        o.B_DONE = false;
-        o.B_WREADY = true;
-        // B_GRANT se mantiene alto si tx_.busy (lo hacemos aparte)
+        o.B_GRANT.store(false, std::memory_order_relaxed);
+        o.B_SHARED_SEEN.store(false, std::memory_order_relaxed);
+        o.B_HITM_SEEN.store(false, std::memory_order_relaxed);
+        // NO limpiar aquí: RVALID/DONE las baja la L1 con exchange(false)
+        o.B_WREADY.store(can_accept_wb, std::memory_order_relaxed);
     }
 }
 
@@ -31,7 +31,7 @@ int Interconnect::pickOwnerRR() {
     const int N = (int)m2b_.size();
     for (int i = 0; i < N; ++i) {
         int k = (rr_ptr_ + i) % N;
-        if (m2b_[k].B_REQ) {
+        if (m2b_[k].B_REQ.load(std::memory_order_acquire)) { // ver payloads previos
             rr_ptr_ = (k + 1) % N;
             return k;
         }
@@ -52,13 +52,17 @@ bool Interconnect::stepMemReadLine() {
             tx_.rdata.fill(0);
             tx_.seg = 4;
         }
+        tx_.mem = ActiveTx::MemPhase::None;
+        return true;
     }
 
     if (tx_.mem == ActiveTx::MemPhase::ReadReq) {
         auto& R = *ram_;
         if (!R.request_active.load(std::memory_order_acquire)) {
             R.write_enable.store(false, std::memory_order_release);
-            R.request_address.store(static_cast<uint16_t>(idx64(tx_.addr_line) + tx_.seg), std::memory_order_release);
+            // EN BYTES: base + seg*8
+            R.request_address.store(static_cast<uint16_t>(idx64(tx_.addr_line) + tx_.seg * 8),
+                std::memory_order_release);
             R.request_active.store(true, std::memory_order_release);
             tx_.mem = ActiveTx::MemPhase::ReadWait;
         }
@@ -67,14 +71,13 @@ bool Interconnect::stepMemReadLine() {
 
     if (tx_.mem == ActiveTx::MemPhase::ReadWait) {
         auto& R = *ram_;
-        if (ram_ && R.response_ready.load(std::memory_order_acquire)) {
+        if (R.response_ready.load(std::memory_order_acquire)) {
             uint64_t w = R.read_data.load(std::memory_order_acquire);
 
             // Copiar 8 bytes little-endian al buffer de línea
             const int off = tx_.seg * 8;
-            for (int i = 0; i < 8; ++i) {
+            for (int i = 0; i < 8; ++i)
                 tx_.rdata[off + i] = static_cast<uint8_t>((w >> (i * 8)) & 0xFF);
-            }
 
             // limpiar flags del canal
             R.response_ready.store(false, std::memory_order_release);
@@ -102,6 +105,8 @@ void Interconnect::startMemWriteLine() {
 bool Interconnect::stepMemWriteLine() {
     if (!ram_) { // fallback: “aceptar y olvidar”
         tx_.seg = 4;
+        tx_.mem = ActiveTx::MemPhase::None;
+        return true;
     }
 
     if (tx_.mem == ActiveTx::MemPhase::WriteReq) {
@@ -110,13 +115,14 @@ bool Interconnect::stepMemWriteLine() {
             // Empacar 8 bytes desde wb_line (little-endian)
             uint64_t w = 0;
             const int off = tx_.seg * 8;
-            for (int i = 0; i < 8; ++i) {
+            for (int i = 0; i < 8; ++i)
                 w |= (static_cast<uint64_t>(tx_.wb_line[off + i]) << (i * 8));
-            }
 
             R.write_data.store(w, std::memory_order_release);
             R.write_enable.store(true, std::memory_order_release);
-            R.request_address.store(static_cast<uint16_t>(idx64(tx_.addr_line) + tx_.seg), std::memory_order_release);
+            // EN BYTES: base + seg*8
+            R.request_address.store(static_cast<uint16_t>(idx64(tx_.addr_line) + tx_.seg * 8),
+                std::memory_order_release);
             R.request_active.store(true, std::memory_order_release);
 
             tx_.mem = ActiveTx::MemPhase::WriteWait;
@@ -126,7 +132,7 @@ bool Interconnect::stepMemWriteLine() {
 
     if (tx_.mem == ActiveTx::MemPhase::WriteWait) {
         auto& R = *ram_;
-        if (ram_ && R.response_ready.load(std::memory_order_acquire)) {
+        if (R.response_ready.load(std::memory_order_acquire)) {
             // limpiar flags del canal
             R.response_ready.store(false, std::memory_order_release);
             R.request_active.store(false, std::memory_order_release);
@@ -136,7 +142,7 @@ bool Interconnect::stepMemWriteLine() {
             tx_.mem = (tx_.seg < 4) ? ActiveTx::MemPhase::WriteReq
                 : ActiveTx::MemPhase::None;
 
-            return (tx_.seg >= 4); // true = línea escrita por completo
+            return (tx_.seg >= 4); // true = línea escrita completa
         }
         return false;
     }
@@ -150,9 +156,9 @@ void Interconnect::tick() {
 
     // Mantener GRANT alto mientras haya transacción activa
     if (tx_.busy && tx_.owner >= 0)
-        b2m_[tx_.owner].B_GRANT = true;
+        b2m_[tx_.owner].B_GRANT.store(true, std::memory_order_relaxed);
 
-    // === 0) Si una operación DRAM está en curso, avánzala primero y cedo el tick ===
+    // 0) Avanzar DRAM si está en curso (cede el tick)
     if (tx_.busy && tx_.mem != ActiveTx::MemPhase::None) {
         bool mem_done = false;
 
@@ -161,10 +167,10 @@ void Interconnect::tick() {
         case ActiveTx::MemPhase::ReadWait: {
             mem_done = stepMemReadLine();
             if (mem_done) {
-                // Publicar datos al solicitante y cerrar
-                b2m_[tx_.owner].B_RVALID = true;
+                // Publicar datos al solicitante y cerrar (payload → flags)
                 b2m_[tx_.owner].B_RDATA = tx_.rdata;
-                b2m_[tx_.owner].B_DONE = true;
+                b2m_[tx_.owner].B_RVALID.store(true, std::memory_order_release);
+                b2m_[tx_.owner].B_DONE.store(true, std::memory_order_release);
                 tx_.busy = false;
             }
             break;
@@ -173,7 +179,7 @@ void Interconnect::tick() {
         case ActiveTx::MemPhase::WriteWait: {
             mem_done = stepMemWriteLine();
             if (mem_done) {
-                b2m_[tx_.owner].B_DONE = true;
+                b2m_[tx_.owner].B_DONE.store(true, std::memory_order_release);
                 tx_.busy = false;
             }
             break;
@@ -181,12 +187,12 @@ void Interconnect::tick() {
         default: break;
         }
 
-        // Mantener GRANT mientras la tx siga activa
-        if (tx_.busy && tx_.owner >= 0) b2m_[tx_.owner].B_GRANT = true;
+        if (tx_.busy && tx_.owner >= 0)
+            b2m_[tx_.owner].B_GRANT.store(true, std::memory_order_relaxed);
         return; // este tick fue para DRAM
     }
 
-    // === 1) Si no hay transacción activa, buscar una nueva ===
+    // 1) Si no hay transacción activa, buscar una nueva
     if (!tx_.busy) {
         int owner = pickOwnerRR();
         if (owner < 0) return; // nadie pidió
@@ -205,7 +211,8 @@ void Interconnect::tick() {
         tx_.mem = ActiveTx::MemPhase::None;
         tx_.seg = 0;
 
-        b2m_[owner].B_GRANT = true; // primer GRANT inmediato
+        // primer GRANT inmediato
+        b2m_[owner].B_GRANT.store(true, std::memory_order_release);
 
         // ===== Fase 1: difusión Snoop =====
         for (int id = 0; id < (int)m2b_.size(); ++id) {
@@ -232,9 +239,9 @@ void Interconnect::tick() {
             }
         }
 
-        // Publicar flags al solicitante
-        b2m_[owner].B_SHARED_SEEN = tx_.seen_shared;
-        b2m_[owner].B_HITM_SEEN = tx_.seen_hitm;
+        // Publicar flags al solicitante (efímeros)
+        b2m_[owner].B_SHARED_SEEN.store(tx_.seen_shared, std::memory_order_relaxed);
+        b2m_[owner].B_HITM_SEEN.store(tx_.seen_hitm, std::memory_order_relaxed);
 
         // ===== Fase 2: ejecución según comando =====
         switch (tx_.cmd) {
@@ -253,12 +260,13 @@ void Interconnect::tick() {
                 if (r2.rvalid) {
                     tx_.have_rdata = true;
                     tx_.rdata = r2.rdata;
-                    b2m_[owner].B_RVALID = true;
+                    // payload → flags
                     b2m_[owner].B_RDATA = r2.rdata;
+                    b2m_[owner].B_RVALID.store(true, std::memory_order_release);
                 }
 
                 // Cierre inmediato (no DRAM)
-                b2m_[owner].B_DONE = true;
+                b2m_[owner].B_DONE.store(true, std::memory_order_release);
                 tx_.busy = false;
                 return;
 
@@ -267,14 +275,14 @@ void Interconnect::tick() {
                 // ---- No hay M: ir a DRAM (lectura en 4 beats) ----
                 startMemReadLine();
                 // Mantener GRANT hasta cerrar
-                b2m_[owner].B_GRANT = true;
+                b2m_[owner].B_GRANT.store(true, std::memory_order_relaxed);
                 return;
             }
         }
 
         case BusCmd::BusUpgr: {
-            // En esta versión, todas las invalidaciones ackean en la misma fase
-            b2m_[owner].B_DONE = true;
+            // Invalidaciones ackean en la misma fase
+            b2m_[owner].B_DONE.store(true, std::memory_order_release);
             tx_.busy = false;
             return;
         }
@@ -283,9 +291,9 @@ void Interconnect::tick() {
             // Escribir línea sucia a DRAM (4 beats)
             tx_.wb_line = m2b_[owner].B_WDATA; // línea completa de 32B
             startMemWriteLine();
-            b2m_[owner].B_GRANT = true;
+            b2m_[owner].B_GRANT.store(true, std::memory_order_relaxed);
             return;
         }
-        }
+        } // switch
     }
 }

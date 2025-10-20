@@ -2,7 +2,10 @@
 #include <vector>
 #include <functional>
 #include <cstdint>
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h" // BusCmd, LineData, SnoopReq/SnoopResp, OFFSET_BITS
+#include <atomic>
+
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"   // BusCmd, LineData, OFFSET_BITS
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"  // SnoopReq, SnoopResp
 
 namespace cpu_tlp { struct RAMConnection; }
 
@@ -10,24 +13,24 @@ namespace cpu_tlp { struct RAMConnection; }
 // Señales L1 → Interconnect
 // ============================================================
 struct MasterToBus {
-    bool     B_REQ{ false };           // solicita bus
-    BusCmd   B_CMD{ BusCmd::BusRd };   // 000/001/010/011
-    uint64_t B_ADDR{ 0 };              // dirección alineada (bits [OFFSET_BITS-1:0]=0)
-    LineData B_WDATA{};              // datos (WriteBack)
-    bool     B_WVALID{ false };        // writeback válido
+    std::atomic<bool> B_REQ{ false };      // solicita bus (publ. payloads → set true)
+    BusCmd   B_CMD{ BusCmd::BusRd };       // payload
+    uint64_t B_ADDR{ 0 };                  // payload (línea alineada)
+    LineData B_WDATA{};                    // payload (línea a volcar)
+    std::atomic<bool> B_WVALID{ false };   // flag: hay WDATA válido
 };
 
 // ============================================================
 // Señales Interconnect → L1
 // ============================================================
 struct BusToMaster {
-    bool     B_GRANT{ false };         // el bus le otorgó el turno
-    bool     B_SHARED_SEEN{ false };   // algún otro tiene copia (S/E/M)
-    bool     B_HITM_SEEN{ false };     // algún otro tenía M (dirty)
-    bool     B_RVALID{ false };        // datos válidos
-    LineData B_RDATA{};              // línea leída
-    bool     B_DONE{ false };          // fin de transacción
-    bool     B_WREADY{ true };         // listo para aceptar WDATA (opcional)
+    std::atomic<bool> B_GRANT{ false };        // grant del bus
+    std::atomic<bool> B_SHARED_SEEN{ false };  // algún otro tiene copia
+    std::atomic<bool> B_HITM_SEEN{ false };    // alguien tenía M (dirty)
+    std::atomic<bool> B_RVALID{ false };       // datos válidos
+    LineData          B_RDATA{};               // payload (no atómico)
+    std::atomic<bool> B_DONE{ false };         // fin de transacción
+    std::atomic<bool> B_WREADY{ true };        // listo para aceptar WDATA
 };
 
 // ============================================================
@@ -45,12 +48,11 @@ public:
     BusToMaster* portB2M(int id) { return &b2m_[id]; }
 
     // Callback de snoop (bus → L1.onSnoop)
-    void attachSnoopCallback(int id,
-        std::function<SnoopResp(const SnoopReq&)> cb) {
+    void attachSnoopCallback(int id, std::function<SnoopResp(const SnoopReq&)> cb) {
         sn_cb_[id] = std::move(cb);
     }
 
-    // Enlazar el backend de DRAM (canal atómico del SharedMemoryComponent)
+    // Enlazar backend de DRAM (canal atómico del SharedMemoryComponent)
     void bindRAM(cpu_tlp::RAMConnection* ram) { ram_ = ram; }
 
     // Avanza un ciclo de bus
@@ -76,7 +78,7 @@ private:
 
         // FSM de memoria (DRAM)
         enum class MemPhase { None, ReadReq, ReadWait, WriteReq, WriteWait } mem{ MemPhase::None };
-        int      seg{ 0 };       // beat 0..3 (cada beat = 8 bytes)
+        int      seg{ 0 };     // beat 0..3 (cada beat = 8 bytes)
 
         void clear() { *this = ActiveTx{}; }
     };
@@ -95,7 +97,7 @@ private:
     int  pickOwnerRR();
     void clearOutputs();
 
-    // Mapear dirección de línea (alineada) a índice de palabra de 64b (4KiB → 512 words)
+    // Mapear dirección de línea (alineada) a offset EN BYTES dentro de la ventana de 4KiB (0x000–0xFFF)
     static uint16_t idx64(uint64_t addr_line);
 
     // DRAM adapters (línea de 32B en 4 beats de 64b)
