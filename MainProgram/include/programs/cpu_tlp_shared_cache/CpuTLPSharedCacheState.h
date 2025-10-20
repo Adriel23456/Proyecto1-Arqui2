@@ -14,6 +14,8 @@ class ICpuTLPView;
 #include "programs/cpu_tlp_shared_cache/components/PE2Component.h"
 #include "programs/cpu_tlp_shared_cache/components/PE3Component.h"
 #include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
+#include "programs/cpu_tlp_shared_cache/components/bus/InterconnectComponent.h"
+#include "programs/cpu_tlp_shared_cache/components/cash/L1Component.h"
 
 class CpuTLPSharedCacheState : public State {
 public:
@@ -91,6 +93,9 @@ private:
     std::unique_ptr<cpu_tlp::PE3Component> m_pe3;
     std::shared_ptr<cpu_tlp::CPUSystemSharedData> m_cpuSystemData;
     std::unique_ptr<cpu_tlp::SharedMemoryComponent> m_sharedMemoryComponent;
+    std::unique_ptr<cpu_tlp::InterconnectComponent> m_interconnect;
+    std::unique_ptr<cpu_tlp::L1Component> m_l1c0, m_l1c1, m_l1c2, m_l1c3;
+
 
     friend class PE0RegView;
     friend class PE1RegView;

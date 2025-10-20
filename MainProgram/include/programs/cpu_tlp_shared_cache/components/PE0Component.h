@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿//PE0Component.h
+#pragma once
 #include "programs/cpu_tlp_shared_cache/components/SharedData.h"
 #include <thread>
 #include <memory>
@@ -26,6 +27,12 @@ namespace cpu_tlp {
         void reset();
 
         bool isRunning() const;
+
+        // --- Nuevos miembros ---
+        std::atomic<bool> m_haltRequested{ false };   // se pide detener (SWI/stop)
+        bool pipelineEmpty() const;                  // F..W en NOP y sin mem-op pendientes
+        void drainAndStop();                         // drena hasta completar handshake y pipeline
+
 
     private:
         void threadMain();

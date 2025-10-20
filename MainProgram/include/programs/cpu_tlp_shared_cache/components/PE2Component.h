@@ -27,6 +27,11 @@ namespace cpu_tlp {
 
         bool isRunning() const;
 
+        // --- Nuevos miembros ---
+        std::atomic<bool> m_haltRequested{ false };   // se pide detener (SWI/stop)
+        bool pipelineEmpty() const;                  // F..W en NOP y sin mem-op pendientes
+        void drainAndStop();                         // drena hasta completar handshake y pipeline
+
     private:
         void threadMain();
         void executeCycle();

@@ -8,8 +8,12 @@
 #include "systems/ConfigManager.h"
 #include "ui/SettingsOverlay.h"
 #include "systems/AudioManager.h"
-
+#include <Windows.h>
+#include <io.h>
+#include <fcntl.h>
 #define CONFIG_PATH RESOURCES_PATH "config.json"
+
+
 
 static void recreateWindow(sf::RenderWindow& window, ConfigManager& cfg) {
     ImGui::SFML::Shutdown();
@@ -29,6 +33,12 @@ static void recreateWindow(sf::RenderWindow& window, ConfigManager& cfg) {
 }
 
 int main() {
+    AllocConsole();
+    freopen("CONOUT$", "w", stdout);
+    freopen("CONOUT$", "w", stderr);
+    std::cout.clear();
+    std::cerr.clear();
+    
     ConfigManager config;
     if (!config.load(CONFIG_PATH)) {
         std::cout << "No se pudo cargar config.json, se usan valores por defecto.\n";

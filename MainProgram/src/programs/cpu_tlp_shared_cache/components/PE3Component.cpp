@@ -674,10 +674,12 @@ namespace cpu_tlp {
         Outputs out;
         out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = false;
         out.FlushD = out.FlushE = false;
+        out.C_READY_ACK = false;
 
         // 1. SegmentationFault
         if (SegmentationFault) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
+            out.C_READY_ACK = false; // <-- Asegurar en retorno temprano
             return out;
         }
 
@@ -685,6 +687,7 @@ namespace cpu_tlp {
         if (!INS_READY) {
             out.StallF = true;
             out.StallD = true;
+            out.C_READY_ACK = false; // <-- Asegurar en retorno temprano
             return out;
         }
 
@@ -1057,6 +1060,61 @@ namespace cpu_tlp {
         auto& ctrl = m_sharedData->pe_control[m_pe_id];
         ctrl.should_stop.store(true, std::memory_order_release);
     }
+    bool PE3Component::pipelineEmpty() const {
+        // NOP_INSTRUCTION es tu burbuja
+        const bool stages_empty =
+            IF_ID.Instr_F == NOP_INSTRUCTION &&
+            ID_EX.Instr_D == NOP_INSTRUCTION &&
+            EX_MEM.Instr_E == NOP_INSTRUCTION &&
+            MEM_WB.Instr_M == NOP_INSTRUCTION;
+
+        // Sin operación de memoria activa en el latch EX/MEM
+        const bool no_mem_req = !EX_MEM.C_REQUEST_E;
+
+        // La L1 no está aguardando ACK (C_READY == 0)
+        const bool l1_not_waiting =
+            !m_sharedData->cache_connections[m_pe_id].C_READY.load(std::memory_order_acquire);
+
+        return stages_empty && no_mem_req && l1_not_waiting;
+    }
+
+    void PE3Component::drainAndStop() {
+        auto& ctrl = m_sharedData->pe_control[m_pe_id];
+        auto& c = m_sharedData->cache_connections[m_pe_id];
+
+        // 1) Ejecutar ciclos hasta que pipeline y handshake se liberen
+        //    (el HazardUnit enviará C_READY_ACK mientras C_READY siga alto)
+        int safety = 20000; // guarda por si algo quedó mal cableado
+        while (!pipelineEmpty() && safety-- > 0 &&
+            !m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
+            executeCycle();
+            // pequeño respiro para no acaparar CPU
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
+
+        // 2) Fuerza de seguridad: si por algún motivo C_READY sigue alto,
+        //    emite ACK por unos ciclos para desbloquear a la L1.
+        if (c.C_READY.load(std::memory_order_acquire)) {
+            for (int i = 0; i < 8; ++i) {
+                c.C_READY_ACK.store(true, std::memory_order_release);
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+                // la L1 bajará C_READY al ver el ACK
+                if (!c.C_READY.load(std::memory_order_acquire)) break;
+            }
+            c.C_READY_ACK.store(false, std::memory_order_release);
+        }
+
+        // 3) Bajar líneas hacia la L1 para dejar todo en estado conocido
+        c.C_REQUEST_M.store(false, std::memory_order_release);
+        c.C_WE_M.store(false, std::memory_order_release);
+        c.C_ISB_M.store(false, std::memory_order_release);
+
+        // 4) Detener formalmente el hilo del PE
+        ctrl.command.store(0, std::memory_order_release);
+        ctrl.running.store(false, std::memory_order_release);
+        ctrl.should_stop.store(false, std::memory_order_release);
+        m_haltRequested.store(false, std::memory_order_release);
+    }
 
     // ============================================================================
     // THREAD MAIN - AGREGAR PRINTS
@@ -1072,10 +1130,27 @@ namespace cpu_tlp {
             int cmd = ctrl.command.load(std::memory_order_acquire);
 
             switch (cmd) {
-            case 0: // idle
+            case 0: {// idle
                 ctrl.running.store(false, std::memory_order_release);
+
+                auto& c = m_sharedData->cache_connections[m_pe_id];
+
+                // Si L1 quedó con C_READY=1, enviar ACK corto para soltarla
+                if (c.C_READY.load(std::memory_order_acquire) &&
+                    !c.C_READY_ACK.load(std::memory_order_acquire)) {
+                    c.C_READY_ACK.store(true, std::memory_order_release);
+                    std::this_thread::sleep_for(std::chrono::microseconds(50));
+                    c.C_READY_ACK.store(false, std::memory_order_release);
+                }
+
+                // Dejar las líneas del lado del PE en cero (estado conocido)
+                c.C_REQUEST_M.store(false, std::memory_order_release);
+                c.C_WE_M.store(false, std::memory_order_release);
+                c.C_ISB_M.store(false, std::memory_order_release);
+
                 std::this_thread::sleep_for(1ms);
                 break;
+            }
 
             case 1: // step
                 executeCycle();
@@ -1146,6 +1221,14 @@ namespace cpu_tlp {
         stageFetch();
 
         updateInstructionTracking();
+        // PUBLICAR el ACK del handshake a SharedMemory
+        auto& cacheConn = m_sharedData->cache_connections[m_pe_id];
+        if (m_hazards.C_READY_ACK) {
+            std::cout << "[PE" << m_pe_id << "] C_READY_ACK=1 (enviado a L1)\n";
+        }
+        cacheConn.C_READY_ACK.store(m_hazards.C_READY_ACK, std::memory_order_release);
+        cacheConn.C_READY_ACK.store(m_hazards.C_READY_ACK, std::memory_order_release);
+
 
         // Actualizar flipflops
         if (!m_hazards.StallW) {
@@ -1381,10 +1464,38 @@ namespace cpu_tlp {
         cacheConn.RD_Rm_Special_M.store(rdRm, std::memory_order_release);
         cacheConn.C_WE_M.store(EX_MEM.C_WE_E, std::memory_order_release);
         cacheConn.C_ISB_M.store(EX_MEM.C_ISB_E, std::memory_order_release);
-        cacheConn.C_REQUEST_M.store(EX_MEM.C_REQUEST_E, std::memory_order_release);
+
+        // --- CLAVE: no mantener REQUEST mientras se aserta el ACK ---
+        const bool req_level = EX_MEM.C_REQUEST_E;     // nivel pedido por EX/MEM
+        const bool ack_now = m_hazards.C_READY_ACK;  // ACK decidido por HazardUnit
+        const bool will_req = (req_level && !ack_now);
+        cacheConn.C_REQUEST_M.store(will_req, std::memory_order_release);
+
+        // ---------- DEBUG: solicitud efectiva (sólo si realmente se aserta) ----------
+        if (will_req) {
+            bool isStore = EX_MEM.C_WE_E;
+            bool isByte = EX_MEM.C_ISB_E;
+            std::cout << "[PE" << m_pe_id << "] "
+                << (isStore ? "STR" : "LDR")
+                << (isByte ? "B" : "64")
+                << " REQ addr=0x" << std::hex << aluOut;
+            if (isStore) std::cout << " data=0x" << std::hex << rdRm;
+            std::cout << std::dec << "\n";
+        }
+        // ---------------------------------------------------------------------------
 
         // Leer respuesta de la cache
         uint64_t rdCout = cacheConn.RD_C_out.load(std::memory_order_acquire);
+
+        // ---------- DEBUG: dato que vuelve ----------
+        if (EX_MEM.MemOp_E && !EX_MEM.C_WE_E && cacheConn.C_READY.load(std::memory_order_acquire)) {
+            std::cout << "[PE" << m_pe_id << "] "
+                << "LDR" << (EX_MEM.C_ISB_E ? "B" : "64")
+                << " DONE addr=0x" << std::hex << aluOut
+                << " data=0x" << rdCout
+                << std::dec << "\n";
+        }
+        // --------------------------------------------
 
         // Mux de memoria
         ALUOutM_O = EX_MEM.MemOp_E ? rdCout : aluOut;
@@ -1397,6 +1508,7 @@ namespace cpu_tlp {
 
         MEM_WB_next.Instr_M = EX_MEM.Instr_E;
     }
+
 
     // ============================================================================
     // STAGE: WRITEBACK

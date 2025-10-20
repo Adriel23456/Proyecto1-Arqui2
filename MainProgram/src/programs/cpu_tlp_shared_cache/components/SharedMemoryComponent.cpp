@@ -1,8 +1,11 @@
-﻿#include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
+﻿//SharedMemoryComponent.cpp
+#include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
 #include "programs/cpu_tlp_shared_cache/widgets/Log.h"
 #include <iostream>
 #include <chrono>
 #include <thread>
+
+
 
 namespace cpu_tlp {
 
@@ -35,6 +38,11 @@ namespace cpu_tlp {
         // Poner el canal RAMConnection en estado conocido
         if (m_sharedData) {
             auto& R = m_sharedData->ram_connection;
+            for (int pe = 0; pe < 4; ++pe) {
+                auto& C = m_sharedData->cache_connections[pe];
+                C.RD_C_out.store(0, std::memory_order_release);
+                C.C_READY.store(false, std::memory_order_release);
+            }
             R.request_active.store(false, std::memory_order_release);
             R.response_ready.store(false, std::memory_order_release);
             R.write_enable.store(false, std::memory_order_release);
@@ -52,21 +60,21 @@ namespace cpu_tlp {
         return true;
     }
 
-void SharedMemoryComponent::shutdown() {
-    if (!m_isRunning) return;
-    std::cout << "[SharedMemory] Shutting down...\n";
+    void SharedMemoryComponent::shutdown() {
+        if (!m_isRunning) return;
+        std::cout << "[SharedMemory] Shutting down...\n";
 
-    if (m_sharedData) {
-        m_sharedData->system_should_stop.store(true, std::memory_order_release); // ← en vez de '='
-    }
+        if (m_sharedData) {
+            m_sharedData->system_should_stop.store(true, std::memory_order_release); // ← en vez de '='
+        }
 
-    if (m_executionThread && m_executionThread->joinable()) {
-        m_executionThread->join();
+        if (m_executionThread && m_executionThread->joinable()) {
+            m_executionThread->join();
+        }
+        m_isRunning = false;
+        m_executionThread.reset();
+        std::cout << "[SharedMemory] Shutdown complete\n";
     }
-    m_isRunning = false;
-    m_executionThread.reset();
-    std::cout << "[SharedMemory] Shutdown complete\n";
-}
 
 
     bool SharedMemoryComponent::isRunning() const {
@@ -75,41 +83,34 @@ void SharedMemoryComponent::shutdown() {
 
     void SharedMemoryComponent::threadMain() {
         using namespace std::chrono_literals;
+        std::cout << "[SharedMemory] Thread started\n";
 
-        std::cout << "[SharedMemory] Thread started" << std::endl;
-
-        // Atiende peticiones de 64 bits del bus (leer/escribir) vía RAMConnection
         auto& R = m_sharedData->ram_connection;
 
         while (!m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
-            // Servicio “poll” con backoff suave
+
+            // Únicamente backend DRAM vía RAMConnection (llamado por el Interconnect)
             if (R.request_active.load(std::memory_order_acquire)) {
-                // Evitá re-atender si ya hay respuesta lista
                 if (!R.response_ready.load(std::memory_order_acquire)) {
                     const uint16_t addr = R.request_address.load(std::memory_order_acquire);
                     if (R.write_enable.load(std::memory_order_acquire)) {
-                        // WRITE de 64 bits
                         const uint64_t w = R.write_data.load(std::memory_order_acquire);
-                        m_memory.write(addr, w);  // fuera de rango => NO-OP (silente)
-                        // Señalizar listo
+                        m_memory.write(addr, w);
                         R.response_ready.store(true, std::memory_order_release);
                     }
                     else {
-                        // READ de 64 bits
-                        const uint64_t val = m_memory.read(addr); // fuera de rango => 0
+                        const uint64_t val = m_memory.read(addr);
                         R.read_data.store(val, std::memory_order_release);
                         R.response_ready.store(true, std::memory_order_release);
                     }
-                    // Importante: NO limpiar request_active acá; el interconnect lo limpia
-                    // cuando consume response_ready (ver interconnect_bus.cpp).
+                    // request_active lo limpia el Interconnect al consumir response_ready
                 }
             }
             else {
-                std::this_thread::sleep_for(5us); // evita busy-wait duro
+                std::this_thread::sleep_for(5us);
             }
         }
 
-        std::cout << "[SharedMemory] Thread ending" << std::endl;
+        std::cout << "[SharedMemory] Thread ending\n";
     }
-
-} // namespace cpu_tlp
+}

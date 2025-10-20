@@ -1,1255 +1,120 @@
-﻿Vamos con última revisada
-InterconnectComponent.h
-#pragma once
-#include <thread>
-#include <memory>
-#include <functional>
-#include <atomic>
-#include "programs/cpu_tlp_shared_cache/components/SharedData.h"
-#include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h"
-
-namespace cpu_tlp {
-
-    class InterconnectComponent {
-    public:
-        InterconnectComponent() = default;
-        ~InterconnectComponent() { shutdown(); }
-
-        // Crea el bus con `masters` y lo conecta a la RAM compartida
-        bool initialize(std::shared_ptr<CPUSystemSharedData> sharedData, int masters);
-        void shutdown();
-
-        // Pasarelas para conectar L1s (nombres “compatibles” con tu código)
-        MasterToBus* portOut(int id);  // L1 -> Bus
-        BusToMaster* portIn(int id);  // Bus -> L1
-        void setSnoopCallback(int id, std::function<SnoopResp(const SnoopReq&)> cb);
-
-        // Acceso directo al bus si lo necesitás
-        Interconnect* raw() { return m_bus.get(); }
-
-
-    private:
-        void threadMain();
-
-    private:
-        std::shared_ptr<CPUSystemSharedData> m_shared{};
-        std::unique_ptr<Interconnect>        m_bus{};
-        std::unique_ptr<std::thread>         m_thr{};
-        std::atomic<bool>                    m_running{ false };
-    };
-
-} // namespace cpu_tlp
-Interconnect_bus.h
-#pragma once
-#include <vector>
-#include <functional>
-#include <cstdint>
-#include <atomic>
-
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"   // BusCmd, LineData, OFFSET_BITS
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"  // SnoopReq, SnoopResp
-
-namespace cpu_tlp { struct RAMConnection; }
-
-// ============================================================
-// Señales L1 → Interconnect
-// ============================================================
-struct MasterToBus {
-    std::atomic<bool> B_REQ{ false };      // solicita bus (publ. payloads → set true)
-    BusCmd   B_CMD{ BusCmd::BusRd };       // payload
-    uint64_t B_ADDR{ 0 };                  // payload (línea alineada)
-    LineData B_WDATA{};                    // payload (línea a volcar)
-    std::atomic<bool> B_WVALID{ false };   // flag: hay WDATA válido
-};
-
-// ============================================================
-// Señales Interconnect → L1
-// ============================================================
-struct BusToMaster {
-    std::atomic<bool> B_GRANT{ false };        // grant del bus
-    std::atomic<bool> B_SHARED_SEEN{ false };  // algún otro tiene copia
-    std::atomic<bool> B_HITM_SEEN{ false };    // alguien tenía M (dirty)
-    std::atomic<bool> B_RVALID{ false };       // datos válidos
-    LineData          B_RDATA{};               // payload (no atómico)
-    std::atomic<bool> B_DONE{ false };         // fin de transacción
-    std::atomic<bool> B_WREADY{ true };        // listo para aceptar WDATA
-};
-
-// ============================================================
-// Interconnect con soporte de DRAM (RAMConnection) y coherencia MESI
-// ============================================================
-class Interconnect {
-public:
-    explicit Interconnect(int num_l1)
-        : m2b_(num_l1), b2m_(num_l1), rr_ptr_(0) {
-        sn_cb_.resize(num_l1);
-    }
-
-    // Puertos por L1 (para conectar en attachBus)
-    MasterToBus* portM2B(int id) { return &m2b_[id]; }
-    BusToMaster* portB2M(int id) { return &b2m_[id]; }
-
-    // Callback de snoop (bus → L1.onSnoop)
-    void attachSnoopCallback(int id, std::function<SnoopResp(const SnoopReq&)> cb) {
-        sn_cb_[id] = std::move(cb);
-    }
-
-    // Enlazar backend de DRAM (canal atómico del SharedMemoryComponent)
-    void bindRAM(cpu_tlp::RAMConnection* ram) { ram_ = ram; }
-
-    // Avanza un ciclo de bus
-    void tick();
-
-private:
-    struct ActiveTx {
-        bool     busy{ false };
-        int      owner{ -1 };
-        BusCmd   cmd{ BusCmd::BusRd };
-        uint64_t addr_line{ 0 };
-
-        bool     seen_shared{ false };
-        bool     seen_hitm{ false };
-        int      m_owner{ -1 };
-
-        int      inv_acks_needed{ 0 };
-        int      inv_acks_got{ 0 };
-
-        bool     have_rdata{ false };
-        LineData rdata{};      // buffer línea leída (C2C o DRAM)
-        LineData wb_line{};    // buffer para WriteBack → DRAM
-
-        // FSM de memoria (DRAM)
-        enum class MemPhase { None, ReadReq, ReadWait, WriteReq, WriteWait } mem{ MemPhase::None };
-        int      seg{ 0 };     // beat 0..3 (cada beat = 8 bytes)
-
-        void clear() { *this = ActiveTx{}; }
-    };
-
-    std::vector<MasterToBus>  m2b_;
-    std::vector<BusToMaster>  b2m_;
-    std::vector<std::function<SnoopResp(const SnoopReq&)>> sn_cb_;
-
-    int rr_ptr_{ 0 };
-    ActiveTx tx_{};
-
-    // Backend DRAM (atomics del SharedMemory)
-    cpu_tlp::RAMConnection* ram_{ nullptr };
-
-    // --- Utilidades internas ---
-    int  pickOwnerRR();
-    void clearOutputs();
-
-    // Mapear dirección de línea (alineada) a offset EN BYTES dentro de la ventana de 4KiB (0x000–0xFFF)
-    static uint16_t idx64(uint64_t addr_line);
-
-    // DRAM adapters (línea de 32B en 4 beats de 64b)
-    void startMemReadLine();
-    bool stepMemReadLine();   // true cuando tx_.rdata está completa
-
-    void startMemWriteLine();
-    bool stepMemWriteLine();  // true cuando la línea se escribió completa
-};
-
-L1Component.h
-#pragma once
-#include <thread>
-#include <memory>
-#include <atomic>
-#include "programs/cpu_tlp_shared_cache/components/SharedData.h"
-
-// Cache y bus (ya existen en tu repo)
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
-#include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h"
-
-namespace cpu_tlp {
-
-    class L1Component {
-    public:
-        explicit L1Component(int id) : m_id(id) {}
-        ~L1Component() { shutdown(); }
-
-        // interconnect debe estar YA creado; este método ata puertos y lanza el hilo
-        bool initialize(std::shared_ptr<CPUSystemSharedData> sharedData,
-            Interconnect* ic);
-        void shutdown();
-
-        // acceso (debug/tests)
-        L1Cache* l1() { return &m_l1; }
-
-    private:
-        void threadMain();
-
-        // Helpers: traducen atomics ⇄ structs
-        CpuReq  readCpuReq();
-        void    writeCpuResp(const CpuResp& r);
-
-    private:
-        int m_id{ -1 };
-        std::shared_ptr<CPUSystemSharedData> m_shared{};
-        std::unique_ptr<std::thread> m_thr{};
-        std::atomic<bool> m_running{ false };
-
-        // núcleo de la caché
-        L1Cache m_l1;
-
-        // puertos del bus (propiedad del interconnect)
-        MasterToBus* m_portOut{ nullptr }; // L1 → bus
-        BusToMaster* m_portIn{ nullptr }; // bus → L1
-    };
-
-} // namespace cpu_tlp
-
-l1_snoop.h
-#pragma once
-#include "l1_cash.h"
-#include <array>
-#include <cstdint>
-
-// ============================================================
-// Configuración base del sistema (debe coincidir con la de L1)
-// ============================================================
-using LineData = std::array<uint8_t, LINE_BYTES>;
-
-// ============================================================
-// Enumeraciones (se replican aquí para evitar include circular)
-// ============================================================
-enum class BusCmd : uint8_t {
-  BusRd   = 0b000,  // lectura compartible
-  BusRdX  = 0b001,  // lectura exclusiva (RFO)
-  BusUpgr = 0b010,  // upgrade S→M
-  WriteBack = 0b011 // writeback (volcado a memoria)
-};
-
-// ============================================================
-// Estructuras de snoop (bus ↔ L1)
-// ============================================================
-
-// Broadcast desde el bus hacia cada L1
-struct SnoopReq {
-  BusCmd   cmd;           // comando difundido
-  uint64_t addr_line;     // dirección alineada (bits [OFFSET_BITS-1:0]=0)
-  bool     grant_data;    // esta L1 fue elegida para poner datos
-  bool     from_self;     // true si proviene de la misma L1 (ignorar)
-};
-
-// Respuesta de la L1 hacia el bus
-struct SnoopResp {
-  bool      has_shared{false}; // L1 tiene copia (S/E/M)
-  bool      has_mod{false};    // L1 tiene M (dirty)
-  bool      inv_ack{false};    // invalidó (ack)
-  bool      rvalid{false};     // hay datos válidos en rdata
-  LineData  rdata{};           // línea de datos (si grant_data)
-};
-
-// ============================================================
-// Nota de uso:
-//
-// - El interconnect combina (OR) los flags de todos los SnoopResp:
-//   * OR(has_shared) → B_SHARED_SEEN
-//   * OR(has_mod)    → B_HITM_SEEN
-//
-// - Si existe un has_mod=1, el bus identifica a esa L1 como “dueño sucio”
-//   y la vuelve a llamar con grant_data=1 para obtener SNP_RDATA.
-//
-// - Los inv_ack se usan para cerrar BusUpgr (invalida S/E en otros PE).
-// ============================================================
-PE0Component.h
-#pragma once
-#include "programs/cpu_tlp_shared_cache/components/SharedData.h"
-#include <thread>
-#include <memory>
-#include <cstdint>
-#include <array>
-#include <atomic>
-#include <functional>
-#include <string>
-
-namespace cpu_tlp {
-
-    class PE0Component {
-    public:
-        PE0Component(int pe_id = 0);
-        ~PE0Component();
-
-        bool initialize(std::shared_ptr<CPUSystemSharedData> sharedData);
-        void shutdown();
-
-        // Comandos de control
-        void step();
-        void stepUntil(int value);
-        void stepIndefinitely();
-        void stopExecution();
-        void reset();
-
-        bool isRunning() const;
-
-    private:
-        void threadMain();
-        void executeCycle();
-
-        // ============ ESTRUCTURAS INTERNAS ============
-
-        // FlipFlops entre etapas
-        struct FetchDecodeReg {
-            uint64_t Instr_F;
-            uint64_t PC_F;
-        };
-
-        struct DecodeExecuteReg {
-            uint8_t RegWrite_D;
-            uint8_t MemOp_D;
-            uint8_t C_WE_D;
-            uint8_t C_REQUEST_D;
-            uint8_t C_ISB_D;
-            uint8_t PCSrc_D;
-            uint8_t FlagsUpd_D;
-            uint8_t ALUControl_D;
-            uint8_t BranchOp_D;
-            uint8_t Flags_in;  // Flags' desde Execute
-            uint64_t SrcA_D;
-            uint64_t SrcB_D;
-            uint64_t RD_Rm_out;
-            uint8_t Rd_in_D;
-            // NUEVO: instrucción que entra a Execute
-            uint64_t Instr_D = 0x4D00000000000000ULL; // NOP
-        };
-
-        struct ExecuteMemoryReg {
-            uint8_t RegWrite_E;
-            uint8_t MemOp_E;
-            uint8_t C_WE_E;
-            uint8_t C_REQUEST_E;
-            uint8_t C_ISB_E;
-            uint8_t PCSrc_AND;
-            uint64_t ALUResult_E;
-            uint64_t RD_Rm_Special_E;
-            uint8_t Rd_in_E;
-            // NUEVO: instrucción que entra a Memory
-            uint64_t Instr_E = 0x4D00000000000000ULL; // NOP
-        };
-
-        struct MemoryWriteBackReg {
-            uint8_t RegWrite_M;
-            uint8_t PCSrc_M;
-            uint64_t ALUOutM_O;
-            uint8_t Rd_in_M;
-            // NUEVO: instrucción que entra a WriteBack
-            uint64_t Instr_M = 0x4D00000000000000ULL; // NOP
-        };
-
-        // ============ UNIDADES FUNCIONALES ============
-
-        class RegisterFile {
-        public:
-            RegisterFile();
-            void reset();
-            uint64_t read(uint8_t addr) const;
-            void write(uint8_t addr, uint64_t value, bool we);
-            uint64_t getUpper() const { return regs[10]; }
-            uint64_t getLower() const { return regs[11]; }
-            void setPEID(int pe_id) { regs[9] = pe_id; }
-            std::function<void(uint8_t addr, uint64_t value)> onRegisterWrite;
-        private:
-            std::array<uint64_t, 12> regs;
-        };
-
-        class ALU {
-        public:
-            struct Result {
-                uint64_t value;
-                uint8_t flags; // NZCV
-            };
-            Result execute(uint8_t control, uint64_t A, uint64_t B, uint8_t flagsIn);
-        };
-
-        class ControlUnit {
-        public:
-            struct Signals {
-                uint8_t RegWrite_D;
-                uint8_t MemOp_D;
-                uint8_t C_WE_D;
-                uint8_t C_REQUEST_D;
-                uint8_t C_ISB_D;
-                uint8_t PCSrc_D;
-                uint8_t FlagsUpd_D;
-                uint8_t ALUControl_D;
-                uint8_t BranchOp_D;
-                uint8_t BranchE;
-                uint8_t ImmOp;
-                uint8_t DataType;
-            };
-            Signals decode(uint8_t opcode);
-        };
-
-        class HazardUnit {
-        public:
-            struct Outputs {
-                bool StallF, StallD, FlushD, StallE, FlushE, StallM, StallW;
-                bool C_READY_ACK;
-            };
-
-            Outputs detect(
-                bool INS_READY,
-                bool C_REQUEST_M, bool C_READY,
-                bool SegmentationFault,
-                bool PCSrc_AND,
-                bool PCSrc_W,
-                uint8_t Rd_in_D, uint8_t Rn_in, uint8_t Rm_in,
-                uint8_t Rd_in_E, uint8_t Rd_in_M, uint8_t Rd_in_W,
-                bool RegWrite_E, bool RegWrite_M, bool RegWrite_W,
-                bool BranchE,
-                uint8_t BranchOp_E
-            );
-
-            void reset() {
-                inMemoryOperation = false;
-                ackSent = false;
-                branchActive = false;
-                branchCycles = 0;
-                branchWaitingForW = false;
-            }
-
-        private:
-            int branchCycles = 0;
-            bool branchActive = false;
-            bool branchWaitingForW = false;
-
-            // ← NUEVO: estado del handshake de memoria
-            bool inMemoryOperation = false;  // ¿Estamos procesando una operación de memoria?
-            bool ackSent = false;            // ¿Ya enviamos el ACK?
-        };
-
-        // ============ ETAPAS DEL PIPELINE ============
-        void stageFetch();
-        void stageDecode();
-        void stageExecute();
-        void stageMemory();
-        void stageWriteBack();
-
-        // ============ HELPERS ============
-        uint64_t extendImmediate(uint32_t imm, bool dataType);
-        bool evaluateBranchCondition(uint8_t branchOp, uint8_t flags);
-
-        // ============ MIEMBROS DE DATOS ============
-        int m_pe_id;
-        std::shared_ptr<CPUSystemSharedData> m_sharedData;
-        std::unique_ptr<std::thread> m_executionThread;
-
-        // Estado del CPU
-        uint64_t PC_F;
-        uint64_t PCPlus8_F;
-
-        // Registros de pipeline
-        FetchDecodeReg IF_ID, IF_ID_next;
-        DecodeExecuteReg ID_EX, ID_EX_next;
-        ExecuteMemoryReg EX_MEM, EX_MEM_next;
-        MemoryWriteBackReg MEM_WB, MEM_WB_next;
-
-        // Señales intermedias (Decode)
-        uint64_t InstrD;
-        uint64_t PC_in;
-        uint8_t Op_in, Rn_in, Rm_in, Rd_in_D;
-        uint32_t Imm_in;
-        uint64_t RD_Rn_out, RD_Rm_out, UPPER_out, LOWER_out;
-        uint64_t Imm_ext_in;
-        bool SegmentationFault;
-        uint64_t SrcA_D, SrcB_D;
-        ControlUnit::Signals ctrlSignals;
-
-        // Señales intermedias (Execute)
-        uint8_t ALUFlagsOut;
-        uint64_t ALUResult_E;
-        uint8_t Flags_prime;  // Flags'
-        bool CondExE;
-        bool PCSrc_AND;
-
-        // Señales intermedias (Memory)
-        uint64_t ALUOutM_O;
-
-        // Señales intermedias (WriteBack)
-        uint64_t PC_prime;
-
-        // Unidades
-        RegisterFile m_registerFile;
-        ALU m_alu;
-        ControlUnit m_controlUnit;
-        HazardUnit m_hazardUnit;
-        HazardUnit::Outputs m_hazards;
-
-        // Estado interno
-        std::atomic<bool> m_isRunning;
-        bool m_segmentationFault;
-
-        // Constantes
-        static constexpr uint64_t NOP_INSTRUCTION = 0x4D00000000000000ULL;
-        static constexpr uint64_t FLUSH_INSTRUCTION = 0x4D00000000000001ULL;
-
-        // Tracking de instrucciones por etapa
-        std::array<uint64_t, 5> m_stageInstructions;
-
-        // Helper para actualizar tracking
-        void updateInstructionTracking();
-    };
-
-} // namespace cpu_tlp 
-InterconnectComponent.cpp
-#include "../include/programs/cpu_tlp_shared_cache/components/bus/InterconnectComponent.h"
-#include <chrono>
+﻿//SharedMemoryComponent.cpp
+#include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
+#include "programs/cpu_tlp_shared_cache/widgets/Log.h"
 #include <iostream>
-
-namespace cpu_tlp {
-
-    bool InterconnectComponent::initialize(std::shared_ptr<CPUSystemSharedData> sharedData, int masters) {
-        if (m_running.load()) return false;
-        if (!sharedData) return false;
-
-        m_shared = std::move(sharedData);
-
-        // Construir el bus con N masters (NO existe ic_.init(...))
-        m_bus = std::make_unique<Interconnect>(masters);
-
-        // Conectar RAM (RAMConnection del SharedMemoryComponent)
-        m_bus->bindRAM(&m_shared->ram_connection);
-
-        m_running.store(true, std::memory_order_release);
-        m_thr = std::make_unique<std::thread>(&InterconnectComponent::threadMain, this);
-        return true;
-    }
-
-    void InterconnectComponent::shutdown() {
-        if (!m_running.exchange(false)) return;
-        if (m_thr && m_thr->joinable()) m_thr->join();
-        m_thr.reset();
-        m_bus.reset();
-    }
-
-    MasterToBus* InterconnectComponent::portOut(int id) {
-        return m_bus ? m_bus->portM2B(id) : nullptr;
-    }
-    BusToMaster* InterconnectComponent::portIn(int id) {
-        return m_bus ? m_bus->portB2M(id) : nullptr;
-    }
-    void InterconnectComponent::setSnoopCallback(int id, std::function<SnoopResp(const SnoopReq&)> cb) {
-        if (m_bus) m_bus->attachSnoopCallback(id, std::move(cb));
-    }
-
-    void InterconnectComponent::threadMain() {
-        using namespace std::chrono_literals;
-        while (m_running.load(std::memory_order_acquire) &&
-            !m_shared->system_should_stop.load(std::memory_order_acquire)) {
-            if (m_bus) m_bus->tick();   // arbitra, difunde snoops, C2C/DRAM, etc.
-            std::this_thread::sleep_for(50us); // suaviza CPU
-        }
-    }
-
-} // namespace cpu_tlp
-interconnect_bus.cpp
-#include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h"
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"
-#include "programs/cpu_tlp_shared_cache/components/SharedData.h" // cpu_tlp::RAMConnection
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
-
-// --- helpers de dirección ---
-static inline uint64_t align_to_line(uint64_t a) {
-    constexpr uint64_t MASK = ~((1ULL << OFFSET_BITS) - 1ULL);
-    return a & MASK;
-}
-
-uint16_t Interconnect::idx64(uint64_t addr_line) {
-    // 4 KiB de ventana => devolver base EN BYTES (no /8)
-    return static_cast<uint16_t>(addr_line & 0xFFFULL);
-}
-
-// --- limpieza de salidas por ciclo ---
-void Interconnect::clearOutputs() {
-    const bool can_accept_wb = !(tx_.busy && tx_.mem != ActiveTx::MemPhase::None);
-    for (auto& o : b2m_) {
-        o.B_GRANT.store(false, std::memory_order_relaxed);
-        o.B_SHARED_SEEN.store(false, std::memory_order_relaxed);
-        o.B_HITM_SEEN.store(false, std::memory_order_relaxed);
-        // NO limpiar aquí: RVALID/DONE las baja la L1 con exchange(false)
-        o.B_WREADY.store(can_accept_wb, std::memory_order_relaxed);
-    }
-}
-
-// --- RR arbiter ---
-int Interconnect::pickOwnerRR() {
-    const int N = (int)m2b_.size();
-    for (int i = 0; i < N; ++i) {
-        int k = (rr_ptr_ + i) % N;
-        if (m2b_[k].B_REQ.load(std::memory_order_acquire)) { // ver payloads previos
-            rr_ptr_ = (k + 1) % N;
-            return k;
-        }
-    }
-    return -1;
-}
-
-// --- DRAM: iniciar lectura de línea (4 beats de 64b) ---
-void Interconnect::startMemReadLine() {
-    tx_.mem = ActiveTx::MemPhase::ReadReq;
-    tx_.seg = 0;
-}
-
-// Devuelve true cuando ya está completa en tx_.rdata
-bool Interconnect::stepMemReadLine() {
-    if (!ram_) { // fallback: responde ceros para no colgarse
-        if (tx_.seg == 0) {
-            tx_.rdata.fill(0);
-            tx_.seg = 4;
-        }
-        tx_.mem = ActiveTx::MemPhase::None;
-        return true;
-    }
-
-    if (tx_.mem == ActiveTx::MemPhase::ReadReq) {
-        auto& R = *ram_;
-        if (!R.request_active.load(std::memory_order_acquire)) {
-            R.write_enable.store(false, std::memory_order_release);
-            // EN BYTES: base + seg*8
-            R.request_address.store(static_cast<uint16_t>(idx64(tx_.addr_line) + tx_.seg * 8),
-                std::memory_order_release);
-            R.request_active.store(true, std::memory_order_release);
-            tx_.mem = ActiveTx::MemPhase::ReadWait;
-        }
-        return false;
-    }
-
-    if (tx_.mem == ActiveTx::MemPhase::ReadWait) {
-        auto& R = *ram_;
-        if (R.response_ready.load(std::memory_order_acquire)) {
-            uint64_t w = R.read_data.load(std::memory_order_acquire);
-
-            // Copiar 8 bytes little-endian al buffer de línea
-            const int off = tx_.seg * 8;
-            for (int i = 0; i < 8; ++i)
-                tx_.rdata[off + i] = static_cast<uint8_t>((w >> (i * 8)) & 0xFF);
-
-            // limpiar flags del canal
-            R.response_ready.store(false, std::memory_order_release);
-            R.request_active.store(false, std::memory_order_release);
-
-            // siguiente beat
-            tx_.seg++;
-            tx_.mem = (tx_.seg < 4) ? ActiveTx::MemPhase::ReadReq
-                : ActiveTx::MemPhase::None;
-
-            return (tx_.seg >= 4); // true = línea completa
-        }
-        return false;
-    }
-
-    return (tx_.seg >= 4);
-}
-
-// --- DRAM: iniciar escritura de línea (4 beats de 64b) ---
-void Interconnect::startMemWriteLine() {
-    tx_.mem = ActiveTx::MemPhase::WriteReq;
-    tx_.seg = 0;
-}
-
-bool Interconnect::stepMemWriteLine() {
-    if (!ram_) { // fallback: “aceptar y olvidar”
-        tx_.seg = 4;
-        tx_.mem = ActiveTx::MemPhase::None;
-        return true;
-    }
-
-    if (tx_.mem == ActiveTx::MemPhase::WriteReq) {
-        auto& R = *ram_;
-        if (!R.request_active.load(std::memory_order_acquire)) {
-            // Empacar 8 bytes desde wb_line (little-endian)
-            uint64_t w = 0;
-            const int off = tx_.seg * 8;
-            for (int i = 0; i < 8; ++i)
-                w |= (static_cast<uint64_t>(tx_.wb_line[off + i]) << (i * 8));
-
-            R.write_data.store(w, std::memory_order_release);
-            R.write_enable.store(true, std::memory_order_release);
-            // EN BYTES: base + seg*8
-            R.request_address.store(static_cast<uint16_t>(idx64(tx_.addr_line) + tx_.seg * 8),
-                std::memory_order_release);
-            R.request_active.store(true, std::memory_order_release);
-
-            tx_.mem = ActiveTx::MemPhase::WriteWait;
-        }
-        return false;
-    }
-
-    if (tx_.mem == ActiveTx::MemPhase::WriteWait) {
-        auto& R = *ram_;
-        if (R.response_ready.load(std::memory_order_acquire)) {
-            // limpiar flags del canal
-            R.response_ready.store(false, std::memory_order_release);
-            R.request_active.store(false, std::memory_order_release);
-
-            // siguiente beat
-            tx_.seg++;
-            tx_.mem = (tx_.seg < 4) ? ActiveTx::MemPhase::WriteReq
-                : ActiveTx::MemPhase::None;
-
-            return (tx_.seg >= 4); // true = línea escrita completa
-        }
-        return false;
-    }
-
-    return (tx_.seg >= 4);
-}
-
-// --- ciclo principal ---
-void Interconnect::tick() {
-    clearOutputs();
-
-    // Mantener GRANT alto mientras haya transacción activa
-    if (tx_.busy && tx_.owner >= 0)
-        b2m_[tx_.owner].B_GRANT.store(true, std::memory_order_relaxed);
-
-    // 0) Avanzar DRAM si está en curso (cede el tick)
-    if (tx_.busy && tx_.mem != ActiveTx::MemPhase::None) {
-        bool mem_done = false;
-
-        switch (tx_.mem) {
-        case ActiveTx::MemPhase::ReadReq:
-        case ActiveTx::MemPhase::ReadWait: {
-            mem_done = stepMemReadLine();
-            if (mem_done) {
-                // Publicar datos al solicitante y cerrar (payload → flags)
-                b2m_[tx_.owner].B_RDATA = tx_.rdata;
-                b2m_[tx_.owner].B_RVALID.store(true, std::memory_order_release);
-                b2m_[tx_.owner].B_DONE.store(true, std::memory_order_release);
-                tx_.busy = false;
-            }
-            break;
-        }
-        case ActiveTx::MemPhase::WriteReq:
-        case ActiveTx::MemPhase::WriteWait: {
-            mem_done = stepMemWriteLine();
-            if (mem_done) {
-                b2m_[tx_.owner].B_DONE.store(true, std::memory_order_release);
-                tx_.busy = false;
-            }
-            break;
-        }
-        default: break;
-        }
-
-        if (tx_.busy && tx_.owner >= 0)
-            b2m_[tx_.owner].B_GRANT.store(true, std::memory_order_relaxed);
-        return; // este tick fue para DRAM
-    }
-
-    // 1) Si no hay transacción activa, buscar una nueva
-    if (!tx_.busy) {
-        int owner = pickOwnerRR();
-        if (owner < 0) return; // nadie pidió
-
-        // Iniciar transacción
-        tx_.busy = true;
-        tx_.owner = owner;
-        tx_.cmd = m2b_[owner].B_CMD;
-        tx_.addr_line = align_to_line(m2b_[owner].B_ADDR);
-        tx_.seen_shared = false;
-        tx_.seen_hitm = false;
-        tx_.m_owner = -1;
-        tx_.have_rdata = false;
-        tx_.inv_acks_needed = 0;
-        tx_.inv_acks_got = 0;
-        tx_.mem = ActiveTx::MemPhase::None;
-        tx_.seg = 0;
-
-        // primer GRANT inmediato
-        b2m_[owner].B_GRANT.store(true, std::memory_order_release);
-
-        // ===== Fase 1: difusión Snoop =====
-        for (int id = 0; id < (int)m2b_.size(); ++id) {
-            if (id == owner) continue;
-            if (!sn_cb_[id]) continue;
-
-            SnoopReq s;
-            s.cmd = tx_.cmd;
-            s.addr_line = tx_.addr_line;
-            s.grant_data = false;
-            s.from_self = false;
-
-            SnoopResp r = sn_cb_[id](s);
-
-            tx_.seen_shared |= r.has_shared;
-            if (r.has_mod) {
-                tx_.seen_hitm = true;
-                if (tx_.m_owner < 0) tx_.m_owner = id;
-            }
-
-            if (tx_.cmd == BusCmd::BusUpgr) {
-                if (r.has_shared && !r.has_mod) tx_.inv_acks_needed++;
-                if (r.inv_ack)                  tx_.inv_acks_got++;
-            }
-        }
-
-        // Publicar flags al solicitante (efímeros)
-        b2m_[owner].B_SHARED_SEEN.store(tx_.seen_shared, std::memory_order_relaxed);
-        b2m_[owner].B_HITM_SEEN.store(tx_.seen_hitm, std::memory_order_relaxed);
-
-        // ===== Fase 2: ejecución según comando =====
-        switch (tx_.cmd) {
-
-        case BusCmd::BusRd:
-        case BusCmd::BusRdX: {
-            if (tx_.seen_hitm && tx_.m_owner >= 0) {
-                // ---- Cache-to-cache: pedir datos al dueño en M ----
-                SnoopReq s2;
-                s2.cmd = tx_.cmd;
-                s2.addr_line = tx_.addr_line;
-                s2.grant_data = true;
-                s2.from_self = false;
-
-                SnoopResp r2 = sn_cb_[tx_.m_owner](s2);
-                if (r2.rvalid) {
-                    tx_.have_rdata = true;
-                    tx_.rdata = r2.rdata;
-                    // payload → flags
-                    b2m_[owner].B_RDATA = r2.rdata;
-                    b2m_[owner].B_RVALID.store(true, std::memory_order_release);
-                }
-
-                // Cierre inmediato (no DRAM)
-                b2m_[owner].B_DONE.store(true, std::memory_order_release);
-                tx_.busy = false;
-                return;
-
-            }
-            else {
-                // ---- No hay M: ir a DRAM (lectura en 4 beats) ----
-                startMemReadLine();
-                // Mantener GRANT hasta cerrar
-                b2m_[owner].B_GRANT.store(true, std::memory_order_relaxed);
-                return;
-            }
-        }
-
-        case BusCmd::BusUpgr: {
-            // Invalidaciones ackean en la misma fase
-            b2m_[owner].B_DONE.store(true, std::memory_order_release);
-            tx_.busy = false;
-            return;
-        }
-
-        case BusCmd::WriteBack: {
-            // Escribir línea sucia a DRAM (4 beats)
-            tx_.wb_line = m2b_[owner].B_WDATA; // línea completa de 32B
-            startMemWriteLine();
-            b2m_[owner].B_GRANT.store(true, std::memory_order_relaxed);
-            return;
-        }
-        } // switch
-    }
-}
-
-L1Component.cpp
-#include "../include/programs/cpu_tlp_shared_cache/components/cash/L1Component.h"
-
 #include <chrono>
+#include <thread>
+#include <array>
+
 
 namespace cpu_tlp {
 
-    bool L1Component::initialize(std::shared_ptr<CPUSystemSharedData> sharedData,
-        Interconnect* ic)
+    SharedMemoryComponent::SharedMemoryComponent()
+        : m_sharedData(nullptr)
+        , m_executionThread(nullptr)
+        , m_isRunning(false)
     {
-        if (m_running.load()) return false;
-        if (!sharedData || !ic) return false;
+    }
 
-        m_shared = std::move(sharedData);
+    SharedMemoryComponent::~SharedMemoryComponent() {
+        shutdown();
+    }
 
-        // 1) Conectar puertos del bus
-        m_portOut = ic->portM2B(m_id);
-        m_portIn = ic->portB2M(m_id);
-        if (!m_portOut || !m_portIn) return false;
+    bool SharedMemoryComponent::initialize(std::shared_ptr<CPUSystemSharedData> sharedData) {
+        if (m_isRunning) {
+            std::cerr << "[SharedMemory] Component already running!" << std::endl;
+            return false;
+        }
 
-        // 2) Adjuntar a la L1 y registrar snoop
-        m_l1.attachBus(m_portOut, m_portIn, m_id);
-        ic->attachSnoopCallback(m_id, [this](const SnoopReq& s) {
-            return m_l1.onSnoop(s);
+        m_sharedData = std::move(sharedData);
+
+        // Log de tamaño
+        log_build_and_print([&](std::ostringstream& oss) {
+            oss << "[SharedMemory] Initializing RAM with "
+                << SharedMemory::MEM_SIZE_BYTES << " bytes ("
+                << SharedMemory::MEM_SIZE_WORDS << " words of 64 bits)\n";
             });
 
-        // 3) Reset local
-        m_l1.reset();
+        // Poner el canal RAMConnection en estado conocido
+        if (m_sharedData) {
+            auto& R = m_sharedData->ram_connection;
+            for (int pe = 0; pe < 4; ++pe) {
+                auto& C = m_sharedData->cache_connections[pe];
+                C.RD_C_out.store(0, std::memory_order_release);
+                C.C_READY.store(false, std::memory_order_release);
+            }
+            R.request_active.store(false, std::memory_order_release);
+            R.response_ready.store(false, std::memory_order_release);
+            R.write_enable.store(false, std::memory_order_release);
+            R.request_address.store(0, std::memory_order_release);
+            R.write_data.store(0, std::memory_order_release);
+            R.read_data.store(0, std::memory_order_release);
+        }
 
-        // 4) Lanzar hilo
-        m_running.store(true, std::memory_order_release);
-        m_thr = std::make_unique<std::thread>(&L1Component::threadMain, this);
+        m_isRunning = true;
+        m_sharedData->system_should_stop.store(false, std::memory_order_release);
+
+        m_executionThread = std::make_unique<std::thread>(&SharedMemoryComponent::threadMain, this);
+
+        std::cout << "[SharedMemory] Component initialized successfully" << std::endl;
         return true;
     }
 
-    void L1Component::shutdown() {
-        if (!m_running.exchange(false)) return;
-        if (m_thr && m_thr->joinable()) m_thr->join();
-        m_thr.reset();
+void SharedMemoryComponent::shutdown() {
+    if (!m_isRunning) return;
+    std::cout << "[SharedMemory] Shutting down...\n";
+
+    if (m_sharedData) {
+        m_sharedData->system_should_stop.store(true, std::memory_order_release); // ← en vez de '='
     }
 
-    CpuReq L1Component::readCpuReq() {
-        CpuReq r{};
-        auto& c = m_shared->cache_connections[m_id];
+    if (m_executionThread && m_executionThread->joinable()) {
+        m_executionThread->join();
+    }
+    m_isRunning = false;
+    m_executionThread.reset();
+    std::cout << "[SharedMemory] Shutdown complete\n";
+}
 
-        // Lectura con acquire: visibilidad de la petición del CPU
-        r.ALUOut_M = c.ALUOut_M.load(std::memory_order_acquire);
-        r.RD_Rm_Special_M = c.RD_Rm_Special_M.load(std::memory_order_acquire);
-        r.C_WE_M = c.C_WE_M.load(std::memory_order_acquire);
-        r.C_ISB_M = c.C_ISB_M.load(std::memory_order_acquire);
-        r.C_REQUEST_M = c.C_REQUEST_M.load(std::memory_order_acquire);
-        r.C_READY_ACK = c.C_READY_ACK.load(std::memory_order_acquire);
-        return r;
+
+    bool SharedMemoryComponent::isRunning() const {
+        return m_isRunning;
     }
 
-    void L1Component::writeCpuResp(const CpuResp& r) {
-        auto& c = m_shared->cache_connections[m_id];
-        // Publicación con release: el CPU verá dato listo + ready de forma atómica
-        c.RD_C_out.store(r.RD_C_out, std::memory_order_release);
-        c.C_READY.store(r.C_READY, std::memory_order_release);
-    }
-
-    void L1Component::threadMain() {
+    void SharedMemoryComponent::threadMain() {
         using namespace std::chrono_literals;
-        while (m_running.load(std::memory_order_acquire) &&
-            !m_shared->system_should_stop.load(std::memory_order_acquire))
-        {
-            // 1) samplear petición de CPU
-            const CpuReq req = readCpuReq();
+        std::cout << "[SharedMemory] Thread started\n";
 
-            // 2) levantar/bajar FSM (tu L1 ya maneja el handshake C_READY/ACK inside)
-            m_l1.beginAccess(req);
-            m_l1.tick();
+        auto& R = m_sharedData->ram_connection;
 
-            // 3) publicar salida
-            writeCpuResp(m_l1.output());
+        while (!m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
 
-            // Evitar busy-wait extremo, sin perder reactividad
-            std::this_thread::sleep_for(100us);
-        }
-    }
-
-} // namespace cpu_tlp
-l1_fsm
- #include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_utils.h"
-#include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h" // MasterToBus / BusToMaster
-
-L1Cache::L1Cache() { reset(); }
-
-void L1Cache::reset() {
-    for (auto& s : sets_) {
-        s.lru = 0;
-        for (auto& w : s.ways) {
-            w.tag = 0; w.state = Mesi::I; w.valid = false; w.data.fill(0);
-        }
-    }
-    out_.C_READY = false; out_.RD_C_out = 0;
-    fsm_ = L1State::IDLE;
-    in_ = {};
-    pend_ = {};
-    temp_fill_.fill(0);
-}
-
-void L1Cache::beginAccess(const CpuReq& req) {
-    in_ = req;
-    if (fsm_ == L1State::WAIT_ACK && in_.C_READY_ACK) {
-        out_.C_READY = false;
-        fsm_ = L1State::IDLE;
-        return;
-    }
-    if (fsm_ == L1State::IDLE && in_.C_REQUEST_M && !out_.C_READY) {
-        fsm_ = L1State::LOOKUP;
-    }
-}
-
-void L1Cache::tick() {
-    switch (fsm_) {
-
-        // ------------------------------------------------------
-    case L1State::LOOKUP: {
-        const auto p = splitAddress(in_.ALUOut_M);
-        auto& set = sets_[p.set];
-
-        int hit_way = findWay(p.set, p.tag);
-        if (hit_way >= 0) {
-            auto& line = set.ways[hit_way];
-
-            if (!in_.C_WE_M) {
-                // ===== READ HIT (LDR / LDRB)
-                if (in_.C_ISB_M)
-                    out_.RD_C_out = static_cast<uint64_t>(read8_in_line(line, p.byte_in_line));
-                else if ((p.off & 0x7) == 0)
-                    out_.RD_C_out = read64_in_line(line, p.dw_in_line);
-
-                // LRU (MRU = hit_way)
-                set.lru = (hit_way == 0) ? 0 : 1;
-
-                out_.C_READY = true;
-                fsm_ = L1State::WAIT_ACK;
-
+            // Únicamente backend DRAM vía RAMConnection (llamado por el Interconnect)
+            if (R.request_active.load(std::memory_order_acquire)) {
+                if (!R.response_ready.load(std::memory_order_acquire)) {
+                    const uint16_t addr = R.request_address.load(std::memory_order_acquire);
+                    if (R.write_enable.load(std::memory_order_acquire)) {
+                        const uint64_t w = R.write_data.load(std::memory_order_acquire);
+                        m_memory.write(addr, w);
+                        R.response_ready.store(true, std::memory_order_release);
+                    }
+                    else {
+                        const uint64_t val = m_memory.read(addr);
+                        R.read_data.store(val, std::memory_order_release);
+                        R.response_ready.store(true, std::memory_order_release);
+                    }
+                    // request_active lo limpia el Interconnect al consumir response_ready
+                }
             }
             else {
-                // ===== WRITE
-                if (line.state == Mesi::S) {
-                    // Write-hit en S → necesita exclusividad: BusUpgr
-                    pend_ = {};
-                    pend_.cmd = BusCmd::BusUpgr;
-                    pend_.req_addr_line = (in_.ALUOut_M & ~((1ULL << OFFSET_BITS) - 1ULL));
-                    pend_.set = p.set;
-                    pend_.victim = hit_way; // no reemplazamos, solo luego cambio de estado
-
-                    // Solicitar bus: payload primero, luego B_REQ (release)
-                    if (pm_out_) {
-                        pm_out_->B_CMD = BusCmd::BusUpgr;
-                        pm_out_->B_ADDR = pend_.req_addr_line;
-                        pm_out_->B_WVALID.store(false, std::memory_order_relaxed);
-                        pm_out_->B_REQ.store(true, std::memory_order_release);
-                    }
-                    fsm_ = L1State::REQ_BUS;
-                    break;
-                }
-
-                // Estados E o M: escribir localmente
-                if (in_.C_ISB_M) {
-                    write8_in_line(line, p.byte_in_line,
-                        static_cast<uint8_t>(in_.RD_Rm_Special_M & 0xFF));
-                }
-                else {
-                    if ((p.off & 0x7) != 0) break; // misaligned (MVP)
-                    write64_in_line(line, p.dw_in_line, in_.RD_Rm_Special_M);
-                }
-                if (line.state == Mesi::E) line.state = Mesi::M;
-
-                // LRU
-                set.lru = (hit_way == 0) ? 0 : 1;
-
-                out_.C_READY = true;
-                fsm_ = L1State::WAIT_ACK;
+                std::this_thread::sleep_for(5us);
             }
         }
-        else {
-            // ===== MISS
-            pend_ = {};
-            pend_.req_addr_line = (in_.ALUOut_M & ~((1ULL << OFFSET_BITS) - 1ULL));
-            pend_.set = p.set;
 
-            // Víctima LRU simple
-            pend_.victim = (set.lru == 0 ? 1 : 0);
-            auto& vict = set.ways[pend_.victim];
-
-            // Si la víctima está en M → WriteBack antes de llenar
-            pend_.need_wb = (vict.valid && vict.state == Mesi::M);
-            if (pend_.need_wb) {
-                // reconstruir dirección de la línea víctima
-                pend_.victim_addr_line =
-                    ((vict.tag << (INDEX_BITS + OFFSET_BITS)) |
-                        (static_cast<uint64_t>(pend_.set) << OFFSET_BITS));
-                pend_.wb_line = vict.data;
-            }
-
-            // Decide comando según acceso: read→BusRd, write→BusRdX (RFO)
-            pend_.cmd = (!in_.C_WE_M) ? BusCmd::BusRd : BusCmd::BusRdX;
-
-            // Solicitar bus (payload primero, luego B_REQ con release)
-            if (pm_out_) {
-                pm_out_->B_CMD = pend_.need_wb ? BusCmd::WriteBack : pend_.cmd;
-                pm_out_->B_ADDR = pend_.need_wb ? pend_.victim_addr_line : pend_.req_addr_line;
-                pm_out_->B_WDATA = pend_.wb_line;
-                pm_out_->B_WVALID.store(pend_.need_wb, std::memory_order_relaxed);
-                pm_out_->B_REQ.store(true, std::memory_order_release);
-            }
-            fsm_ = L1State::REQ_BUS;
-        }
-    } break;
-
-                        // ------------------------------------------------------
-    case L1State::REQ_BUS: {
-        // Nada: sólo transitivo a WAIT_GRANT
-        fsm_ = L1State::WAIT_GRANT;
-    } break;
-
-                         // ------------------------------------------------------
-    case L1State::WAIT_GRANT: {
-        if (pm_in_ && pm_in_->B_GRANT.load(std::memory_order_acquire)) {
-            // flags efímeros (relaxed basta)
-            pend_.saw_shared |= pm_in_->B_SHARED_SEEN.load(std::memory_order_relaxed);
-            pend_.saw_hitm |= pm_in_->B_HITM_SEEN.load(std::memory_order_relaxed);
-            fsm_ = L1State::WAIT_DATA;
-        }
-    } break;
-
-                            // ------------------------------------------------------
-    case L1State::WAIT_DATA: {
-        if (!pm_in_) break;
-
-        // flags efímeros: se limpian cada tick en el bus
-        pend_.saw_shared |= pm_in_->B_SHARED_SEEN.load(std::memory_order_relaxed);
-        pend_.saw_hitm |= pm_in_->B_HITM_SEEN.load(std::memory_order_relaxed);
-
-        // si hay datos, consumir y limpiar el flag (acq_rel para visibilidad mutua)
-        if (pm_in_->B_RVALID.exchange(false, std::memory_order_acq_rel)) {
-            temp_fill_ = pm_in_->B_RDATA; // payload ya “publicado” por el bus
-        }
-
-        // cierre de la transacción (consumir DONE una sola vez)
-        if (pm_in_->B_DONE.exchange(false, std::memory_order_acq_rel)) {
-            // ¿acabamos de hacer un WB previo? Mantener B_REQ alto y sólo cambiar payload
-            if (pm_out_ && pm_out_->B_CMD == BusCmd::WriteBack) {
-                pm_out_->B_CMD = pend_.cmd;
-                pm_out_->B_ADDR = pend_.req_addr_line;
-                pm_out_->B_WVALID.store(false, std::memory_order_relaxed);
-                pend_.saw_shared = false;
-                pend_.saw_hitm = false;
-                fsm_ = L1State::WAIT_GRANT;
-                break;
-            }
-
-            // transacción real terminada → ir a FILL (o upgrade)
-            fsm_ = L1State::FILL;
-        }
-    } break;
-
-                           // ------------------------------------------------------
-    case L1State::FILL: {
-        const auto p = splitAddress(in_.ALUOut_M);
-        auto& set = sets_[pend_.set];
-
-        if (pend_.cmd == BusCmd::BusUpgr) {
-            // Upgrade no trae datos; sólo cambiar S→M y aplicar store
-            int way = findWay(pend_.set, p.tag);
-            if (way >= 0) {
-                auto& line = set.ways[way];
-                line.state = Mesi::M;
-                // Aplicar el store pendiente (el CPU mantiene la misma req)
-                if (in_.C_ISB_M) {
-                    write8_in_line(line, p.byte_in_line,
-                        static_cast<uint8_t>(in_.RD_Rm_Special_M & 0xFF));
-                }
-                else if ((p.off & 0x7) == 0) {
-                    write64_in_line(line, p.dw_in_line, in_.RD_Rm_Special_M);
-                }
-                // LRU
-                set.lru = (way == 0) ? 0 : 1;
-            }
-            // Responder al CPU
-            out_.C_READY = true;
-            // Soltar el bus
-            if (pm_out_) {
-                pm_out_->B_WVALID.store(false, std::memory_order_release);
-                pm_out_->B_REQ.store(false, std::memory_order_release);
-            }
-            fsm_ = L1State::WAIT_ACK;
-            break;
-        }
-
-        // FILL de línea para BusRd / BusRdX
-        auto& vict = set.ways[pend_.victim];
-        vict.data = temp_fill_;
-        vict.tag = (pend_.req_addr_line >> (OFFSET_BITS + INDEX_BITS));
-        vict.valid = true;
-
-        if (pend_.cmd == BusCmd::BusRd) {
-            // E si nadie más la tiene; S si hubo shared/hitm
-            vict.state = (pend_.saw_shared || pend_.saw_hitm) ? Mesi::S : Mesi::E;
-
-            // Entregar dato de lectura al CPU
-            if (in_.C_ISB_M)
-                out_.RD_C_out = static_cast<uint64_t>(read8_in_line(vict, p.byte_in_line));
-            else if ((p.off & 0x7) == 0)
-                out_.RD_C_out = read64_in_line(vict, p.dw_in_line);
-
-        }
-        else { // BusRdX (RFO) => terminar en M y aplicar el store
-            vict.state = Mesi::M;
-
-            if (in_.C_ISB_M)
-                write8_in_line(vict, p.byte_in_line,
-                    static_cast<uint8_t>(in_.RD_Rm_Special_M & 0xFF));
-            else if ((p.off & 0x7) == 0)
-                write64_in_line(vict, p.dw_in_line, in_.RD_Rm_Special_M);
-        }
-
-        // LRU: la víctima pasa a MRU
-        set.lru = (pend_.victim == 0) ? 0 : 1;
-
-        // Handshake al CPU
-        out_.C_READY = true;
-
-        // Soltar el bus (atomic stores con release)
-        if (pm_out_) {
-            pm_out_->B_WVALID.store(false, std::memory_order_release);
-            pm_out_->B_REQ.store(false, std::memory_order_release);
-        }
-
-        fsm_ = L1State::WAIT_ACK;
-    } break;
-
-                      // ------------------------------------------------------
-    case L1State::WAIT_ACK: {
-        if (in_.C_READY_ACK) {
-            out_.C_READY = false;
-            fsm_ = L1State::IDLE;
-        }
-    } break;
-
-                          // ------------------------------------------------------
-
+        std::cout << "[SharedMemory] Thread ending\n";
     }
 }
-
-int L1Cache::findWay(uint32_t set, uint64_t tag) const {
-    const auto& cs = sets_[set];
-    for (int w = 0; w < (int)WAYS; ++w) {
-        const auto& line = cs.ways[w];
-        if (line.valid && line.state != Mesi::I && line.tag == tag) return w;
-    }
-    return -1;
-}
-l1_snoop.cpp
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_utils.h"
-#include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"
-
-SnoopResp L1Cache::onSnoop(const SnoopReq& s) {
-  SnoopResp r{};
-  const uint64_t LINE_MASK = ~((1ULL << OFFSET_BITS) - 1ULL);
-  const uint64_t aligned   = s.addr_line & LINE_MASK;
-  const auto p             = splitAddress(aligned);
-  if (s.from_self) return r;
-
-  int way = findWay(p.set, p.tag);
-  if (way < 0) return r;
-
-  auto& line = sets_[p.set].ways[way];
-  r.has_shared = (line.state == Mesi::S || line.state == Mesi::E || line.state == Mesi::M);
-  r.has_mod    = (line.state == Mesi::M);
-
-  switch (s.cmd) {
-    case BusCmd::BusRd:
-      if (line.state == Mesi::M && s.grant_data) {
-        r.rdata = line.data; r.rvalid = true;
-      }
-      if (line.state == Mesi::M || line.state == Mesi::E) line.state = Mesi::S;
-      break;
-
-    case BusCmd::BusRdX:
-      if ((line.state == Mesi::M || line.state == Mesi::S || line.state == Mesi::E) && s.grant_data) {
-        r.rdata = line.data; r.rvalid = true;
-      }
-      line.state = Mesi::I; line.valid = false; r.inv_ack = true;
-      break;
-      
-    case BusCmd::BusUpgr:
-      if (line.state == Mesi::S || line.state == Mesi::E) {
-        line.state = Mesi::I; line.valid = false; r.inv_ack = true;
-      }
-      break;
-
-    case BusCmd::WriteBack:
-    default:
-      break;
-  }
-  return r;
-}
-PEComponent.cpp
+//PE0Component.c
 #include "programs/cpu_tlp_shared_cache/components/PE0Component.h"
 #include "programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h"
 #include "programs/cpu_tlp_shared_cache/widgets/Log.h"
@@ -1261,6 +126,8 @@ PEComponent.cpp
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include "programs/cpu_tlp_shared_cache/tlp_debug.h"
+
 
 static constexpr uint8_t REG_ZERO = 0;
 static constexpr uint8_t REG_PEID = 9;
@@ -2138,6 +1005,7 @@ namespace cpu_tlp {
     }
 
     bool PE0Component::initialize(std::shared_ptr<CPUSystemSharedData> sharedData) {
+       
         if (m_isRunning.load()) {
             return false;
         }
@@ -2309,6 +1177,62 @@ namespace cpu_tlp {
         auto& ctrl = m_sharedData->pe_control[m_pe_id];
         ctrl.should_stop.store(true, std::memory_order_release);
     }
+    bool PE0Component::pipelineEmpty() const {
+        // NOP_INSTRUCTION es tu burbuja
+        const bool stages_empty =
+            IF_ID.Instr_F == NOP_INSTRUCTION &&
+            ID_EX.Instr_D == NOP_INSTRUCTION &&
+            EX_MEM.Instr_E == NOP_INSTRUCTION &&
+            MEM_WB.Instr_M == NOP_INSTRUCTION;
+
+        // Sin operación de memoria activa en el latch EX/MEM
+        const bool no_mem_req = !EX_MEM.C_REQUEST_E;
+
+        // La L1 no está aguardando ACK (C_READY == 0)
+        const bool l1_not_waiting =
+            !m_sharedData->cache_connections[m_pe_id].C_READY.load(std::memory_order_acquire);
+
+        return stages_empty && no_mem_req && l1_not_waiting;
+    }
+
+    void PE0Component::drainAndStop() {
+        auto& ctrl = m_sharedData->pe_control[m_pe_id];
+        auto& c = m_sharedData->cache_connections[m_pe_id];
+
+        // 1) Ejecutar ciclos hasta que pipeline y handshake se liberen
+        //    (el HazardUnit enviará C_READY_ACK mientras C_READY siga alto)
+        int safety = 20000; // guarda por si algo quedó mal cableado
+        while (!pipelineEmpty() && safety-- > 0 &&
+            !m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
+            executeCycle();
+            // pequeño respiro para no acaparar CPU
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
+
+        // 2) Fuerza de seguridad: si por algún motivo C_READY sigue alto,
+        //    emite ACK por unos ciclos para desbloquear a la L1.
+        if (c.C_READY.load(std::memory_order_acquire)) {
+            for (int i = 0; i < 8; ++i) {
+                c.C_READY_ACK.store(true, std::memory_order_release);
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+                // la L1 bajará C_READY al ver el ACK
+                if (!c.C_READY.load(std::memory_order_acquire)) break;
+            }
+            c.C_READY_ACK.store(false, std::memory_order_release);
+        }
+
+        // 3) Bajar líneas hacia la L1 para dejar todo en estado conocido
+        c.C_REQUEST_M.store(false, std::memory_order_release);
+        c.C_WE_M.store(false, std::memory_order_release);
+        c.C_ISB_M.store(false, std::memory_order_release);
+
+        // 4) Detener formalmente el hilo del PE
+        ctrl.command.store(0, std::memory_order_release);
+        ctrl.running.store(false, std::memory_order_release);
+        ctrl.should_stop.store(false, std::memory_order_release);
+        m_haltRequested.store(false, std::memory_order_release);
+    }
+
 
     // ============================================================================
     // THREAD MAIN - AGREGAR PRINTS
@@ -2324,10 +1248,27 @@ namespace cpu_tlp {
             int cmd = ctrl.command.load(std::memory_order_acquire);
 
             switch (cmd) {
-            case 0: // idle
+            case 0: {// idle
                 ctrl.running.store(false, std::memory_order_release);
+
+                auto& c = m_sharedData->cache_connections[m_pe_id];
+
+                // Si L1 quedó con C_READY=1, enviar ACK corto para soltarla
+                if (c.C_READY.load(std::memory_order_acquire) &&
+                    !c.C_READY_ACK.load(std::memory_order_acquire)) {
+                    c.C_READY_ACK.store(true, std::memory_order_release);
+                    std::this_thread::sleep_for(std::chrono::microseconds(50));
+                    c.C_READY_ACK.store(false, std::memory_order_release);
+                }
+
+                // Dejar las líneas del lado del PE en cero (estado conocido)
+                c.C_REQUEST_M.store(false, std::memory_order_release);
+                c.C_WE_M.store(false, std::memory_order_release);
+                c.C_ISB_M.store(false, std::memory_order_release);
+
                 std::this_thread::sleep_for(1ms);
                 break;
+            }
 
             case 1: // step
                 executeCycle();
@@ -2354,6 +1295,7 @@ namespace cpu_tlp {
 
             case 3: { // step_infinite - AGREGADO: llaves para crear scope
                 if (ctrl.should_stop.load(std::memory_order_acquire)) {
+                    std::cout << "[PE" << m_pe_id << "] STOP observed in threadMain (case 3)\n";
                     ctrl.command.store(0, std::memory_order_release);
                     ctrl.running.store(false, std::memory_order_release);
                     ctrl.should_stop.store(false, std::memory_order_release);
@@ -2401,6 +1343,10 @@ namespace cpu_tlp {
 
         // ← NUEVO: Escribir C_READY_ACK a la conexión compartida
         auto& cacheConn = m_sharedData->cache_connections[m_pe_id];
+
+        if (m_hazards.C_READY_ACK) {
+            std::cout << "[PE" << m_pe_id << "] C_READY_ACK=1 (enviado a L1)\n";
+        }
         cacheConn.C_READY_ACK.store(m_hazards.C_READY_ACK, std::memory_order_release);
 
         // Actualizar flipflops
@@ -2450,6 +1396,22 @@ namespace cpu_tlp {
 
 
         std::this_thread::sleep_for(std::chrono::microseconds(500));
+        // ---- DEBUG: Watchdog de bucle corto por PC ----
+        static uint64_t last_pc = 0;
+        static int same_pc_count = 0;
+        if (PC_F == last_pc) {
+            if (++same_pc_count == 1'000'000) {
+                std::cout << "[PE" << m_pe_id << "] PC stuck at 0x"
+                    << std::hex << PC_F << std::dec
+                    << " (1e6 cycles) => posible bucle infinito\n";
+                same_pc_count = 0;
+            }
+        }
+        else {
+            same_pc_count = 0;
+        }
+        last_pc = PC_F;
+
     }
 
     // ============================================================================
@@ -2490,6 +1452,15 @@ namespace cpu_tlp {
 
         // Control Unit
         ctrlSignals = m_controlUnit.decode(Op_in);
+
+        // ---- DEBUG: ver SWI en D ----
+        static bool saw_swi_once = false;
+        if (Op_in == 0x4C && !saw_swi_once) {
+            saw_swi_once = true;
+            std::cout << "[PE" << m_pe_id << "] SWI detected at PC=0x"
+                << std::hex << PC_in << std::dec << "\n";
+        }
+
 
         // --- INC/DEC: son unarias y leen el mismo Rd ---
         // Asegura que la HazardUnit vea dependencia RAW contra Rd
@@ -2627,6 +1598,9 @@ namespace cpu_tlp {
     // STAGE: MEMORY
     // ============================================================================
 
+
+// ...
+
     void PE0Component::stageMemory() {
         // Leer del flipflop EX/MEM
         uint64_t aluOut = EX_MEM.ALUResult_E;
@@ -2640,8 +1614,31 @@ namespace cpu_tlp {
         cacheConn.C_ISB_M.store(EX_MEM.C_ISB_E, std::memory_order_release);
         cacheConn.C_REQUEST_M.store(EX_MEM.C_REQUEST_E, std::memory_order_release);
 
+        // ---------- DEBUG: solicitud saliente ----------
+        if (EX_MEM.C_REQUEST_E) {
+            bool isStore = EX_MEM.C_WE_E;
+            bool isByte = EX_MEM.C_ISB_E;
+            std::cout << "[PE" << m_pe_id << "] "
+                << (isStore ? "STR" : "LDR")
+                << (isByte ? "B" : "64")
+                << " REQ addr=0x" << std::hex << aluOut;
+            if (isStore) std::cout << " data=0x" << std::hex << rdRm;
+            std::cout << std::dec << "\n";
+        }
+        // ----------------------------------------------
+
         // Leer respuesta de la cache
         uint64_t rdCout = cacheConn.RD_C_out.load(std::memory_order_acquire);
+
+        // ---------- DEBUG: dato que vuelve ----------
+        if (EX_MEM.MemOp_E && !EX_MEM.C_WE_E && cacheConn.C_READY.load(std::memory_order_acquire)) {
+            std::cout << "[PE" << m_pe_id << "] "
+                << "LDR" << (EX_MEM.C_ISB_E ? "B" : "64")
+                << " DONE addr=0x" << std::hex << aluOut
+                << " data=0x" << rdCout
+                << std::dec << "\n";
+        }
+        // --------------------------------------------
 
         // Mux de memoria
         ALUOutM_O = EX_MEM.MemOp_E ? rdCout : aluOut;
@@ -2654,6 +1651,7 @@ namespace cpu_tlp {
 
         MEM_WB_next.Instr_M = EX_MEM.Instr_E;
     }
+
 
     // ============================================================================
     // STAGE: WRITEBACK
@@ -2700,1367 +1698,183 @@ namespace cpu_tlp {
         }
     }
 
-} // namespace cpu_tlp 
+} // namespace cpu_tlp
+//L1_Component.cpp
+#include "../include/programs/cpu_tlp_shared_cache/components/cash/L1Component.h"
 
-CpuTLPSharedCacheState.cpp 
-#include "programs/cpu_tlp_shared_cache/CpuTLPSharedCacheState.h"
-#include "programs/cpu_tlp_shared_cache/CpuTLPControlAPI.h"
-#include "programs/cpu_tlp_shared_cache/views/ICpuTLPView.h"
-#include "programs/cpu_tlp_shared_cache/views/GeneralView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE0CPUView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE0RegView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE0MemView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE1CPUView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE1RegView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE1MemView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE2CPUView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE2RegView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE2MemView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE3CPUView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE3RegView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE3MemView.h"
-#include "programs/cpu_tlp_shared_cache/views/RAMView.h"
-#include "programs/cpu_tlp_shared_cache/views/AnalysisDataView.h"
-#include "programs/cpu_tlp_shared_cache/components/InstructionMemoryComponent.h"
-#include "programs/cpu_tlp_shared_cache/components/SharedData.h"
-#include "programs/cpu_tlp_shared_cache/components/PE0Component.h"
-#include "programs/cpu_tlp_shared_cache/components/PE1Component.h"
-#include "programs/cpu_tlp_shared_cache/components/PE2Component.h"
-#include "programs/cpu_tlp_shared_cache/components/PE3Component.h"
-#include "programs/cpu_tlp_shared_cache/views/CompilerView.h"
-#include "programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h"
-#include <imgui.h>
-#include <iostream>
-#include <memory>
-#include <algorithm>
-#include <string>
-
-CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindow* win)
-    : State(sm, win) {
-
-    // 1) Construir UNA SOLA estructura de datos compartidos
-    m_cpuSystemData = std::make_shared<cpu_tlp::CPUSystemSharedData>();
-
-    // 2) Lanzar InstructionMemory
-    m_instructionMemory = std::make_unique<cpu_tlp::InstructionMemoryComponent>();
-    if (!m_instructionMemory->initialize(m_cpuSystemData)) {
-        std::cerr << "[CpuTLP] InstructionMemory init failed\n";
-    }
-
-    // 2.5) Lanzar SharedMemory (NUEVO)
-    m_sharedMemoryComponent = std::make_unique<cpu_tlp::SharedMemoryComponent>();
-    if (!m_sharedMemoryComponent->initialize(m_cpuSystemData)) {
-        std::cerr << "[CpuTLP] SharedMemory init failed\n";
-    }
-
-    // 2.7) Lanzar Interconnect (4 maestros) y cablearlo a RAM
-    m_interconnect = std::make_unique<cpu_tlp::InterconnectComponent>();
-    if (!m_interconnect->initialize(m_cpuSystemData, /*masters=*/4)) {
-        std::cerr << "[CpuTLP] Interconnect init failed\n";
-    }
-
-    // 2.8) Crear L1s (cada una es un hilo)
-    m_l1c0 = std::make_unique<cpu_tlp::L1Component>(0);
-    m_l1c1 = std::make_unique<cpu_tlp::L1Component>(1);
-    m_l1c2 = std::make_unique<cpu_tlp::L1Component>(2);
-    m_l1c3 = std::make_unique<cpu_tlp::L1Component>(3);
-
-    auto* bus = m_interconnect->raw(); // Interconnect*
-    if (!m_l1c0->initialize(m_cpuSystemData, bus)) std::cerr << "L1(0) init failed\n";
-    if (!m_l1c1->initialize(m_cpuSystemData, bus)) std::cerr << "L1(1) init failed\n";
-    if (!m_l1c2->initialize(m_cpuSystemData, bus)) std::cerr << "L1(2) init failed\n";
-    if (!m_l1c3->initialize(m_cpuSystemData, bus)) std::cerr << "L1(3) init failed\n";
-
-
-
-    // 3) Crear PE0
-    m_pe0 = std::make_unique<cpu_tlp::PE0Component>(0);
-    if (!m_pe0->initialize(m_cpuSystemData)) {
-        std::cerr << "[CpuTLP] PE0 init failed\n";
-    }
-
-    // 4) Crear PE1
-    m_pe1 = std::make_unique<cpu_tlp::PE1Component>(1);
-    if (!m_pe1->initialize(m_cpuSystemData)) {
-        std::cerr << "[CpuTLP] PE1 init failed\n";
-    }
-
-    // 5) Crear PE2
-    m_pe2 = std::make_unique<cpu_tlp::PE2Component>(2);
-    if (!m_pe2->initialize(m_cpuSystemData)) {
-        std::cerr << "[CpuTLP] PE2 init failed\n";
-    }
-
-    // 6) Crear PE3
-    m_pe3 = std::make_unique<cpu_tlp::PE3Component>(3);
-    if (!m_pe3->initialize(m_cpuSystemData)) {
-        std::cerr << "[CpuTLP] PE3 init failed\n";
-    }
-
-    m_swiSeenCount.fill(0);
-    m_activeSwiPopupPe = -1;
-
-    // 7) Registrar callbacks PE0
-    cpu_tlp_ui::onResetPE0 = [this] { this->resetPE0(); };
-    cpu_tlp_ui::onStepPE0 = [this] { this->stepPE0(); };
-    cpu_tlp_ui::onStepUntilPE0 = [this](int n) { this->stepUntilPE0(n); };
-    cpu_tlp_ui::onStepIndefinitelyPE0 = [this] { this->stepIndefinitelyPE0(); };
-    cpu_tlp_ui::onStopPE0 = [this] { this->stopPE0(); };
-
-    // 8) Registrar callbacks PE1
-    cpu_tlp_ui::onResetPE1 = [this] { this->resetPE1(); };
-    cpu_tlp_ui::onStepPE1 = [this] { this->stepPE1(); };
-    cpu_tlp_ui::onStepUntilPE1 = [this](int n) { this->stepUntilPE1(n); };
-    cpu_tlp_ui::onStepIndefinitelyPE1 = [this] { this->stepIndefinitelyPE1(); };
-    cpu_tlp_ui::onStopPE1 = [this] { this->stopPE1(); };
-
-    // 9) Registrar callbacks PE2
-    cpu_tlp_ui::onResetPE2 = [this] { this->resetPE2(); };
-    cpu_tlp_ui::onStepPE2 = [this] { this->stepPE2(); };
-    cpu_tlp_ui::onStepUntilPE2 = [this](int n) { this->stepUntilPE2(n); };
-    cpu_tlp_ui::onStepIndefinitelyPE2 = [this] { this->stepIndefinitelyPE2(); };
-    cpu_tlp_ui::onStopPE2 = [this] { this->stopPE2(); };
-
-    // 10) Registrar callbacks PE3
-    cpu_tlp_ui::onResetPE3 = [this] { this->resetPE3(); };
-    cpu_tlp_ui::onStepPE3 = [this] { this->stepPE3(); };
-    cpu_tlp_ui::onStepUntilPE3 = [this](int n) { this->stepUntilPE3(n); };
-    cpu_tlp_ui::onStepIndefinitelyPE3 = [this] { this->stepIndefinitelyPE3(); };
-    cpu_tlp_ui::onStopPE3 = [this] { this->stopPE3(); };
-
-    buildAllViews();
-}
-
-CpuTLPSharedCacheState::~CpuTLPSharedCacheState() {
-    // Orden inverso
-    if (m_pe3) m_pe3->shutdown();
-    m_pe3.reset();
-
-    if (m_pe2) m_pe2->shutdown();
-    m_pe2.reset();
-
-    if (m_pe1) m_pe1->shutdown();
-    m_pe1.reset();
-
-    if (m_pe0) m_pe0->shutdown();
-    m_pe0.reset();
-
-    if (m_sharedMemoryComponent) m_sharedMemoryComponent->shutdown();
-    m_sharedMemoryComponent.reset();
-
-    if (m_instructionMemory) m_instructionMemory->shutdown();
-    m_instructionMemory.reset();
-
-    if (m_l1c3) m_l1c3->shutdown(); m_l1c3.reset();
-    if (m_l1c2) m_l1c2->shutdown(); m_l1c2.reset();
-    if (m_l1c1) m_l1c1->shutdown(); m_l1c1.reset();
-    if (m_l1c0) m_l1c0->shutdown(); m_l1c0.reset();
-
-    if (m_interconnect) m_interconnect->shutdown();
-    m_interconnect.reset();
-
-}
-
-void CpuTLPSharedCacheState::buildAllViews() {
-    // Orden EXACTO:
-    // Compiler, General View,
-    // PE0 CPU, PE0 Reg, PE0 Mem,
-    // PE1 CPU, PE1 Reg, PE1 Mem,
-    // PE2 CPU, PE2 Reg, PE2 Mem,
-    // PE3 CPU, PE3 Reg, PE3 Mem,
-    // RAM, Analysis Data
-
-    // Crear CompilerView con callback configurado (sin sobrescribirlo después)
-    auto compilerView = std::make_unique<CompilerView>();
-    compilerView->setCompileCallback([this](const std::string& /*sourceCode*/) {
-        std::cout << "[CpuTLPSharedCacheState] Compilation callback triggered" << std::endl;
-        if (m_instructionMemory) {
-            bool reloadSuccess = m_instructionMemory->reloadInstructionMemory();
-            if (reloadSuccess) {
-                std::cout << "[CpuTLPSharedCacheState] Instruction memory reloaded successfully" << std::endl;
-            }
-            else {
-                std::cerr << "[CpuTLPSharedCacheState] Failed to reload instruction memory" << std::endl;
-            }
-        }
-        });
-    m_views[panelIndex(Panel::Compiler)] = std::move(compilerView);
-
-    m_views[panelIndex(Panel::GeneralView)] = std::make_unique<GeneralView>();
-
-    m_views[panelIndex(Panel::PE0CPU)] = std::make_unique<PE0CPUView>();
-    m_views[panelIndex(Panel::PE0Reg)] = std::make_unique<PE0RegView>();
-    m_views[panelIndex(Panel::PE0Mem)] = std::make_unique<PE0MemView>();
-
-    m_views[panelIndex(Panel::PE1CPU)] = std::make_unique<PE1CPUView>();
-    m_views[panelIndex(Panel::PE1Reg)] = std::make_unique<PE1RegView>();
-    m_views[panelIndex(Panel::PE1Mem)] = std::make_unique<PE1MemView>();
-
-    m_views[panelIndex(Panel::PE2CPU)] = std::make_unique<PE2CPUView>();
-    m_views[panelIndex(Panel::PE2Reg)] = std::make_unique<PE2RegView>();
-    m_views[panelIndex(Panel::PE2Mem)] = std::make_unique<PE2MemView>();
-
-    m_views[panelIndex(Panel::PE3CPU)] = std::make_unique<PE3CPUView>();
-    m_views[panelIndex(Panel::PE3Reg)] = std::make_unique<PE3RegView>();
-    m_views[panelIndex(Panel::PE3Mem)] = std::make_unique<PE3MemView>();
-
-    auto ramView = std::make_unique<RAMView>();
-    ramView->setSharedMemoryComponent(m_sharedMemoryComponent.get());
-    m_views[panelIndex(Panel::RAM)] = std::move(ramView);
-    m_views[panelIndex(Panel::AnalysisData)] = std::make_unique<AnalysisDataView>();
-}
-
-ICpuTLPView* CpuTLPSharedCacheState::getView(Panel p) {
-    return m_views[panelIndex(p)].get();
-}
-
-void CpuTLPSharedCacheState::handleEvent(sf::Event& e) {
-    if (auto* v = getView(m_selected)) v->handleEvent(e);
-}
-
-void CpuTLPSharedCacheState::update(float dt) {
-    // PE0
-    if (auto* pe0RegView = dynamic_cast<PE0RegView*>(getView(Panel::PE0Reg))) {
-        auto& snapshot = m_cpuSystemData->pe_registers[0];
-        for (int i = 0; i < 12; ++i) {
-            uint64_t value = snapshot.registers[i].load(std::memory_order_acquire);
-            pe0RegView->setRegValueByIndex_(i, value);
-        }
-    }
-
-    // PE1
-    if (auto* pe1RegView = dynamic_cast<PE1RegView*>(getView(Panel::PE1Reg))) {
-        auto& snapshot = m_cpuSystemData->pe_registers[1];
-        for (int i = 0; i < 12; ++i) {
-            uint64_t value = snapshot.registers[i].load(std::memory_order_acquire);
-            pe1RegView->setRegValueByIndex_(i, value);
-        }
-    }
-
-    // PE2
-    if (auto* pe2RegView = dynamic_cast<PE2RegView*>(getView(Panel::PE2Reg))) {
-        auto& snapshot = m_cpuSystemData->pe_registers[2];
-        for (int i = 0; i < 12; ++i) {
-            uint64_t value = snapshot.registers[i].load(std::memory_order_acquire);
-            pe2RegView->setRegValueByIndex_(i, value);
-        }
-    }
-
-    // PE3
-    if (auto* pe3RegView = dynamic_cast<PE3RegView*>(getView(Panel::PE3Reg))) {
-        auto& snapshot = m_cpuSystemData->pe_registers[3];
-        for (int i = 0; i < 12; ++i) {
-            uint64_t value = snapshot.registers[i].load(std::memory_order_acquire);
-            pe3RegView->setRegValueByIndex_(i, value);
-        }
-    }
-
-    // PE0 CPU View
-    if (auto* pe0CPUView = dynamic_cast<PE0CPUView*>(getView(Panel::PE0CPU))) {
-        auto& tracking = m_cpuSystemData->pe_instruction_tracking[0];
-        std::array<std::string, 5> labels;
-        for (int attempt = 0; attempt < 2; ++attempt) {
-            uint64_t v1 = tracking.version.load(std::memory_order_acquire);
-            if (v1 & 1ULL) continue;
-            uint64_t raw[5];
-            for (int i = 0; i < 5; ++i) {
-                raw[i] = tracking.stage_instructions[i].load(std::memory_order_acquire);
-            }
-            uint64_t v2 = tracking.version.load(std::memory_order_acquire);
-            if (v1 == v2 && !(v2 & 1ULL)) {
-                for (int i = 0; i < 5; ++i) {
-                    labels[i] = cpu_tlp::InstructionDisassembler::disassemble(raw[i]);
-                }
-                pe0CPUView->setLabels(labels);
-                break;
-            }
-        }
-    }
-
-    // PE1 CPU View
-    if (auto* pe1CPUView = dynamic_cast<PE1CPUView*>(getView(Panel::PE1CPU))) {
-        auto& tracking = m_cpuSystemData->pe_instruction_tracking[1];
-        std::array<std::string, 5> labels;
-        for (int attempt = 0; attempt < 2; ++attempt) {
-            uint64_t v1 = tracking.version.load(std::memory_order_acquire);
-            if (v1 & 1ULL) continue;
-            uint64_t raw[5];
-            for (int i = 0; i < 5; ++i) {
-                raw[i] = tracking.stage_instructions[i].load(std::memory_order_acquire);
-            }
-            uint64_t v2 = tracking.version.load(std::memory_order_acquire);
-            if (v1 == v2 && !(v2 & 1ULL)) {
-                for (int i = 0; i < 5; ++i) {
-                    labels[i] = cpu_tlp::InstructionDisassembler::disassemble(raw[i]);
-                }
-                pe1CPUView->setLabels(labels);
-                break;
-            }
-        }
-    }
-
-    // PE2 CPU View
-    if (auto* pe2CPUView = dynamic_cast<PE2CPUView*>(getView(Panel::PE2CPU))) {
-        auto& tracking = m_cpuSystemData->pe_instruction_tracking[2];
-        std::array<std::string, 5> labels;
-        for (int attempt = 0; attempt < 2; ++attempt) {
-            uint64_t v1 = tracking.version.load(std::memory_order_acquire);
-            if (v1 & 1ULL) continue;
-            uint64_t raw[5];
-            for (int i = 0; i < 5; ++i) {
-                raw[i] = tracking.stage_instructions[i].load(std::memory_order_acquire);
-            }
-            uint64_t v2 = tracking.version.load(std::memory_order_acquire);
-            if (v1 == v2 && !(v2 & 1ULL)) {
-                for (int i = 0; i < 5; ++i) {
-                    labels[i] = cpu_tlp::InstructionDisassembler::disassemble(raw[i]);
-                }
-                pe2CPUView->setLabels(labels);
-                break;
-            }
-        }
-    }
-
-    // PE3 CPU View
-    if (auto* pe3CPUView = dynamic_cast<PE3CPUView*>(getView(Panel::PE3CPU))) {
-        auto& tracking = m_cpuSystemData->pe_instruction_tracking[3];
-        std::array<std::string, 5> labels;
-        for (int attempt = 0; attempt < 2; ++attempt) {
-            uint64_t v1 = tracking.version.load(std::memory_order_acquire);
-            if (v1 & 1ULL) continue;
-            uint64_t raw[5];
-            for (int i = 0; i < 5; ++i) {
-                raw[i] = tracking.stage_instructions[i].load(std::memory_order_acquire);
-            }
-            uint64_t v2 = tracking.version.load(std::memory_order_acquire);
-            if (v1 == v2 && !(v2 & 1ULL)) {
-                for (int i = 0; i < 5; ++i) {
-                    labels[i] = cpu_tlp::InstructionDisassembler::disassemble(raw[i]);
-                }
-                pe3CPUView->setLabels(labels);
-                break;
-            }
-        }
-    }
-
-    // Detectar SWI
-    for (int pe = 0; pe < 4; ++pe) {
-        uint32_t seen = m_swiSeenCount[pe];
-        uint32_t cur = m_cpuSystemData->ui_signals[pe].swi_count.load(std::memory_order_acquire);
-        if (cur > seen) {
-            uint32_t delta = cur - seen;
-            for (uint32_t k = 0; k < delta; ++k) {
-                m_swiQueue.push_back(pe);
-            }
-            m_swiSeenCount[pe] = cur;
-        }
-    }
-
-    for (auto& v : m_views) {
-        if (v) v->update(dt);
-    }
-}
-
-bool CpuTLPSharedCacheState::sidebarButton(const char* label, bool selected, float width, float height) {
-    ImVec2 textSize = ImGui::CalcTextSize(label);
-    float paddingX = ImGui::GetStyle().FramePadding.x * 2.f;
-    float available = width - paddingX;
-    float scale = available > 0.f ? (available / std::max(1.f, textSize.x)) : 1.f;
-    scale = std::clamp(scale, 0.85f, 1.35f);
-
-    ImVec4 normal = ImGui::GetStyleColorVec4(ImGuiCol_Button);
-    ImVec4 normalHov = ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered);
-    ImVec4 normalAct = ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive);
-
-    ImVec4 active = ImVec4(normal.x * 0.7f + 0.3f, normal.y * 0.7f + 0.3f, normal.z * 0.7f + 0.3f, 1.0f);
-    ImVec4 activeHov = ImVec4(normalHov.x * 0.7f + 0.3f, normalHov.y * 0.7f + 0.3f, normalHov.z * 0.7f + 0.3f, 1.0f);
-    ImVec4 activeAct = ImVec4(normalAct.x * 0.7f + 0.3f, normalAct.y * 0.7f + 0.3f, normalAct.z * 0.7f + 0.3f, 1.0f);
-
-    if (selected) {
-        ImGui::PushStyleColor(ImGuiCol_Button, active);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, activeHov);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, activeAct);
-    }
-
-    ImGui::SetWindowFontScale(scale);
-    bool clicked = ImGui::Button(label, ImVec2(width, height));
-    ImGui::SetWindowFontScale(1.0f);
-
-    if (selected) ImGui::PopStyleColor(3);
-    return clicked;
-}
-
-void CpuTLPSharedCacheState::render() {
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
-
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-
-    if (ImGui::Begin("##CpuTLPSharedCache", nullptr, flags)) {
-
-        // --- Abrir el siguiente popup pendiente (uno a la vez) ---
-        if (m_activeSwiPopupPe == -1 && !m_swiQueue.empty()) {
-            m_activeSwiPopupPe = m_swiQueue.front();
-            m_swiQueue.pop_front();
-            ImGui::OpenPopup(makeSwiPopupId(m_activeSwiPopupPe).c_str());
-        }
-
-        ImVec2 avail = ImGui::GetContentRegionAvail();
-        const float leftW = avail.x * 0.20f;         // 20%
-        const float SEP = 4.0f;
-        const float rightW = avail.x - leftW - SEP;  // 80%
-        const float contentH = avail.y;
-
-        // === Sidebar con scroll ===
-        ImGui::BeginChild("##LeftSidebar", ImVec2(leftW, contentH), true,
-            ImGuiWindowFlags_AlwaysVerticalScrollbar);
-
-        const float TOP_PAD = 14.0f;
-        const float BTN_H = 56.0f;
-        float btnW = ImGui::GetContentRegionAvail().x;
-
-        ImGui::Dummy(ImVec2(1, TOP_PAD));
-        if (sidebarButton("Compiler", (m_selected == Panel::Compiler), btnW, BTN_H)) m_selected = Panel::Compiler;
-        ImGui::Dummy(ImVec2(1, 10));
-
-        if (sidebarButton("General View", (m_selected == Panel::GeneralView), btnW, BTN_H)) m_selected = Panel::GeneralView;
-        ImGui::Dummy(ImVec2(1, 10));
-
-        if (sidebarButton("PE0 CPU", (m_selected == Panel::PE0CPU), btnW, BTN_H)) m_selected = Panel::PE0CPU;
-        ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE0 Reg", (m_selected == Panel::PE0Reg), btnW, BTN_H)) m_selected = Panel::PE0Reg;     // NUEVO
-        ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE0 Cache", (m_selected == Panel::PE0Mem), btnW, BTN_H)) m_selected = Panel::PE0Mem;
-        ImGui::Dummy(ImVec2(1, 10));
-
-        if (sidebarButton("PE1 CPU", (m_selected == Panel::PE1CPU), btnW, BTN_H)) m_selected = Panel::PE1CPU;
-        ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE1 Reg", (m_selected == Panel::PE1Reg), btnW, BTN_H)) m_selected = Panel::PE1Reg;     // NUEVO
-        ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE1 Cache", (m_selected == Panel::PE1Mem), btnW, BTN_H)) m_selected = Panel::PE1Mem;
-        ImGui::Dummy(ImVec2(1, 10));
-
-        if (sidebarButton("PE2 CPU", (m_selected == Panel::PE2CPU), btnW, BTN_H)) m_selected = Panel::PE2CPU;
-        ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE2 Reg", (m_selected == Panel::PE2Reg), btnW, BTN_H)) m_selected = Panel::PE2Reg;     // NUEVO
-        ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE2 Cache", (m_selected == Panel::PE2Mem), btnW, BTN_H)) m_selected = Panel::PE2Mem;
-        ImGui::Dummy(ImVec2(1, 10));
-
-        if (sidebarButton("PE3 CPU", (m_selected == Panel::PE3CPU), btnW, BTN_H)) m_selected = Panel::PE3CPU;
-        ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE3 Reg", (m_selected == Panel::PE3Reg), btnW, BTN_H)) m_selected = Panel::PE3Reg;     // NUEVO
-        ImGui::Dummy(ImVec2(1, 10));
-        if (sidebarButton("PE3 Cache", (m_selected == Panel::PE3Mem), btnW, BTN_H)) m_selected = Panel::PE3Mem;
-        ImGui::Dummy(ImVec2(1, 10));
-
-        if (sidebarButton("RAM", (m_selected == Panel::RAM), btnW, BTN_H)) m_selected = Panel::RAM;
-        ImGui::Dummy(ImVec2(1, 10));
-
-        if (sidebarButton("Analysis Data", (m_selected == Panel::AnalysisData), btnW, BTN_H)) m_selected = Panel::AnalysisData;
-
-        ImGui::EndChild();
-
-        ImGui::SameLine(0.0f, SEP);
-
-        // === Panel derecho (sin scroll en el child, cada vista gestiona lo suyo) ===
-        ImGuiWindowFlags rightFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-        ImGui::BeginChild("##RightPane", ImVec2(rightW, contentH), true, rightFlags);
-        if (auto* v = getView(m_selected)) v->render();
-        ImGui::EndChild();
-
-        // --- Popup SWI activo ---
-        if (m_activeSwiPopupPe != -1) {
-            const int pe = m_activeSwiPopupPe;
-            const std::string popupId = makeSwiPopupId(pe);
-            const std::string msg = "!PE" + std::to_string(pe) + " stopped via SWI!";
-
-            // Calcular tamaño mínimo para que el texto quepa en una línea + botones
-            ImVec2 textSize = ImGui::CalcTextSize(msg.c_str());
-            const float sidePad = 48.0f;  // margen horizontal
-            const float vertPad = 80.0f;  // margen vertical + botones
-            const float minWidth = textSize.x + sidePad;
-            const float minHeight = textSize.y + vertPad;
-
-            // Asegurar tamaño cómodo al aparecer (no guardado entre runs)
-            ImGui::SetNextWindowSize(ImVec2(std::max(360.0f, minWidth),
-                std::max(160.0f, minHeight)),
-                ImGuiCond_Appearing);
-
-            // Modal: impide que se mezclen varios a la vez
-            if (ImGui::BeginPopupModal(popupId.c_str(), nullptr,
-                ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
-            {
-                ImGui::TextUnformatted(msg.c_str());
-                ImGui::Separator();
-
-                // Botón OK
-                if (ImGui::Button("OK", ImVec2(120, 0))) {
-                    ImGui::CloseCurrentPopup();
-                }
-
-                ImGui::SameLine();
-
-                // Tu botón exacto: "Change to PE"
-                if (ImGui::Button("PE", ImVec2(120, 0))) {
-                    switch (pe) {
-                    case 0: m_selected = Panel::PE0CPU; break;
-                    case 1: m_selected = Panel::PE1CPU; break;
-                    case 2: m_selected = Panel::PE2CPU; break;
-                    case 3: m_selected = Panel::PE3CPU; break;
-                    }
-                    ImGui::CloseCurrentPopup();
-                }
-
-                ImGui::EndPopup();
-            }
-
-            // Si el modal ya no está abierto, liberar el activo para abrir el siguiente de la cola
-            if (!ImGui::IsPopupOpen(popupId.c_str())) {
-                m_activeSwiPopupPe = -1;
-                // El próximo frame, si hay pendientes en m_swiQueue, se abrirá el siguiente
-            }
-        }
-
-        ImGui::End();
-    }
-}
-
-void CpuTLPSharedCacheState::renderBackground() {
-    m_window->clear(sf::Color(20, 20, 25));
-}
-
-// ---- Wrappers de control PE0 ----
-void CpuTLPSharedCacheState::resetPE0() {
-    if (m_pe0) {
-        m_pe0->reset();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepPE0() {
-    if (m_pe0) {
-        m_pe0->step();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepUntilPE0(int n) {
-    if (m_pe0) {
-        m_pe0->stepUntil(n);
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepIndefinitelyPE0() {
-    if (m_pe0) {
-        m_pe0->stepIndefinitely();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stopPE0() {
-    if (m_pe0) {
-        m_pe0->stopExecution();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
-    }
-}
-
-// ---- Wrappers de control PE1 ----
-void CpuTLPSharedCacheState::resetPE1() {
-    if (m_pe1) {
-        m_pe1->reset();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE1 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepPE1() {
-    if (m_pe1) {
-        m_pe1->step();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE1 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepUntilPE1(int n) {
-    if (m_pe1) {
-        m_pe1->stepUntil(n);
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE1 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepIndefinitelyPE1() {
-    if (m_pe1) {
-        m_pe1->stepIndefinitely();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE1 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stopPE1() {
-    if (m_pe1) {
-        m_pe1->stopExecution();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE1 is null!\n";
-    }
-}
-
-// ---- Wrappers de control PE2 ----
-void CpuTLPSharedCacheState::resetPE2() {
-    if (m_pe2) {
-        m_pe2->reset();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE2 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepPE2() {
-    if (m_pe2) {
-        m_pe2->step();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE2 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepUntilPE2(int n) {
-    if (m_pe2) {
-        m_pe2->stepUntil(n);
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE2 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepIndefinitelyPE2() {
-    if (m_pe2) {
-        m_pe2->stepIndefinitely();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE2 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stopPE2() {
-    if (m_pe2) {
-        m_pe2->stopExecution();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE2 is null!\n";
-    }
-}
-
-// ---- Wrappers de control PE3 ----
-void CpuTLPSharedCacheState::resetPE3() {
-    if (m_pe3) {
-        m_pe3->reset();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE3 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepPE3() {
-    if (m_pe3) {
-        m_pe3->step();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE3 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepUntilPE3(int n) {
-    if (m_pe3) {
-        m_pe3->stepUntil(n);
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE3 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stepIndefinitelyPE3() {
-    if (m_pe3) {
-        m_pe3->stepIndefinitely();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE3 is null!\n";
-    }
-}
-
-void CpuTLPSharedCacheState::stopPE3() {
-    if (m_pe3) {
-        m_pe3->stopExecution();
-    }
-    else {
-        std::cerr << "[CpuTLPSharedCacheState] PE3 is null!\n";
-    }
-} 
-SharedMmemory.cpp
-#include "programs/cpu_tlp_shared_cache/components/SharedMemory.h"
-#include <fstream>
-#include <iostream>
-#include <algorithm>
-#include <iterator>
-
-SharedMemory::SharedMemory()
-    : memory(MEM_SIZE_WORDS, 0)
-{
-}
-
-// ================== operaciones ==================
-uint64_t SharedMemory::read(uint16_t address) {
-    std::lock_guard<std::mutex> lock(memMutex);
-
-    // Si la dirección está fuera de rango (>= 0x1000), retornar 0x0 silenciosamente
-    if (address >= MEM_SIZE_BYTES) {
-        return 0;
-    }
-
-    // Leer 8 bytes desde la dirección especificada (puede cruzar límites de words)
-    uint64_t result = 0;
-
-    for (int i = 0; i < 8; ++i) {
-        uint16_t byteAddr = address + i;
-
-        // Si nos salimos del rango, los bytes faltantes son 0x0
-        if (byteAddr >= MEM_SIZE_BYTES) {
-            break;
-        }
-
-        // Calcular word y posición del byte dentro del word
-        uint16_t wordIndex = byteAddr / 8;
-        uint8_t byteOffset = byteAddr % 8;
-
-        // Extraer el byte correspondiente
-        uint8_t byteValue = (memory[wordIndex] >> (byteOffset * 8)) & 0xFF;
-
-        // Ensamblar en little-endian
-        result |= (static_cast<uint64_t>(byteValue) << (i * 8));
-    }
-
-    accessLog.push_back({ "READ", address, result });
-    return result;
-}
-
-void SharedMemory::write(uint16_t address, uint64_t value) {
-    std::lock_guard<std::mutex> lock(memMutex);
-
-    // Si la dirección está fuera de rango (>= 0x1000), no hacer nada silenciosamente
-    if (address >= MEM_SIZE_BYTES) {
-        return;
-    }
-
-    // Escribir 8 bytes desde la dirección especificada (puede cruzar límites de words)
-    for (int i = 0; i < 8; ++i) {
-        uint16_t byteAddr = address + i;
-
-        // Si nos salimos del rango, detener
-        if (byteAddr >= MEM_SIZE_BYTES) {
-            break;
-        }
-
-        // Calcular word y posición del byte dentro del word
-        uint16_t wordIndex = byteAddr / 8;
-        uint8_t byteOffset = byteAddr % 8;
-
-        // Extraer el byte del valor a escribir (little-endian)
-        uint8_t byteValue = (value >> (i * 8)) & 0xFF;
-
-        // Crear máscara para limpiar el byte específico
-        uint64_t mask = ~(0xFFULL << (byteOffset * 8));
-
-        // Actualizar solo ese byte en el word
-        memory[wordIndex] = (memory[wordIndex] & mask) | (static_cast<uint64_t>(byteValue) << (byteOffset * 8));
-    }
-
-    accessLog.push_back({ "WRITE", address, value });
-}
-
-// ================== acceso sin registro ==================
-uint64_t SharedMemory::get(uint16_t address) const {
-    std::lock_guard<std::mutex> lock(memMutex);
-
-    // Si la dirección está fuera de rango (>= 0x1000), retornar 0x0 silenciosamente
-    if (address >= MEM_SIZE_BYTES) {
-        return 0;
-    }
-
-    // Leer 8 bytes desde la dirección especificada
-    uint64_t result = 0;
-
-    for (int i = 0; i < 8; ++i) {
-        uint16_t byteAddr = address + i;
-
-        if (byteAddr >= MEM_SIZE_BYTES) {
-            break;
-        }
-
-        uint16_t wordIndex = byteAddr / 8;
-        uint8_t byteOffset = byteAddr % 8;
-
-        uint8_t byteValue = (memory[wordIndex] >> (byteOffset * 8)) & 0xFF;
-        result |= (static_cast<uint64_t>(byteValue) << (i * 8));
-    }
-
-    return result;
-}
-
-void SharedMemory::set(uint16_t address, uint64_t value) {
-    std::lock_guard<std::mutex> lock(memMutex);
-
-    // Si la dirección está fuera de rango (>= 0x1000), no hacer nada silenciosamente
-    if (address >= MEM_SIZE_BYTES) {
-        return;
-    }
-
-    // Escribir 8 bytes desde la dirección especificada
-    for (int i = 0; i < 8; ++i) {
-        uint16_t byteAddr = address + i;
-
-        if (byteAddr >= MEM_SIZE_BYTES) {
-            break;
-        }
-
-        uint16_t wordIndex = byteAddr / 8;
-        uint8_t byteOffset = byteAddr % 8;
-
-        uint8_t byteValue = (value >> (i * 8)) & 0xFF;
-        uint64_t mask = ~(0xFFULL << (byteOffset * 8));
-
-        memory[wordIndex] = (memory[wordIndex] & mask) | (static_cast<uint64_t>(byteValue) << (byteOffset * 8));
-    }
-}
-
-// ================== carga desde archivo ==================
-bool SharedMemory::loadFromFile(const std::string& path, uint16_t startAddr, size_t align) {
-    if (align != 1 && align != 2 && align != 4 && align != 8) {
-        std::cerr << "[SharedMemory] Invalid alignment: " << align << "\n";
-        return false;
-    }
-
-    std::ifstream file(path, std::ios::binary | std::ios::ate);
-    if (!file.is_open()) {
-        std::cerr << "[SharedMemory] Could not open file: " << path << "\n";
-        return false;
-    }
-
-    std::streamsize fileSize = file.tellg();
-    if (fileSize <= 0) {
-        std::cerr << "[SharedMemory] Empty or invalid file: " << path << "\n";
-        return false;
-    }
-    file.seekg(0, std::ios::beg);
-
-
-
-    // Capacidad real desde startAddr (en bytes)
-    if (startAddr >= MEM_SIZE_BYTES) {
-        std::cerr << "[SharedMemory] startAddr out of range\n";
-        return false;
-    }
-    const size_t capacityFromStart = MEM_SIZE_BYTES - startAddr;
-    const size_t bytesToRead = static_cast<size_t>(std::min<std::streamsize>(fileSize, static_cast<std::streamsize>(capacityFromStart)));
-
-    std::vector<uint8_t> buffer(bytesToRead);
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), bytesToRead)) {
-        std::cerr << "[SharedMemory] Error reading file: " << path << "\n";
-        return false;
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(memMutex);
-
-        // Reset total y log
-        std::fill(memory.begin(), memory.end(), 0);
-        accessLog.clear();
-
-        // Escribir byte a byte en layout de 64-bit words (little-endian por byte)
-        for (size_t i = 0; i < bytesToRead; ++i) {
-            const uint16_t byteAddr = static_cast<uint16_t>(startAddr + i);
-            const uint16_t wordIndex = byteAddr / 8;
-            const uint8_t  byteOff = byteAddr % 8;
-
-            const uint64_t mask = ~(0xFFULL << (byteOff * 8));
-            const uint64_t v = static_cast<uint64_t>(buffer[i]) << (byteOff * 8);
-            memory[wordIndex] = (memory[wordIndex] & mask) | v;
-
-            // Opcional: logear cuando completamos un word o al final
-            const bool completedWord = (byteOff == 7) || (i + 1 == bytesToRead);
-            if (completedWord) {
-                accessLog.push_back({ "LOAD", static_cast<uint16_t>(wordIndex * 8), memory[wordIndex] });
-            }
-        }
-
-        // Mensaje de resultado
-        std::cout << "[SharedMemory] Loaded " << bytesToRead << " bytes from " << path
-            << " at byte address " << startAddr;
-
-        if (static_cast<size_t>(fileSize) > bytesToRead) {
-            // Recortado por falta de espacio
-            std::cout << " (truncated " << (static_cast<size_t>(fileSize) - bytesToRead) << " bytes)";
-        }
-        else if (startAddr > 0 || bytesToRead < MEM_SIZE_BYTES) {
-            // Quedó cero-fill en el resto
-            const size_t zeroFilledBytes = MEM_SIZE_BYTES - bytesToRead - startAddr;
-            if (zeroFilledBytes > 0)
-                std::cout << " (filled " << zeroFilledBytes << " remaining bytes with 0x0)";
-        }
-        std::cout << "\n";
-    }
-
-    return true;
-}
-
-
-// ================== log utils ==================
-void SharedMemory::clearLog() {
-    std::lock_guard<std::mutex> lock(memMutex);
-    accessLog.clear();
-}
-
-std::vector<SharedMemory::AccessLog> SharedMemory::getLog() const {
-    std::lock_guard<std::mutex> lock(memMutex);
-    return accessLog;
-}
-
-void SharedMemory::printLog() const {
-    std::lock_guard<std::mutex> lock(memMutex);
-    std::cout << "---- Memory Access Log ----\n";
-    for (const auto& e : accessLog) {
-        std::cout << e.type << " [Byte Addr " << e.address << "] = 0x"
-            << std::hex << e.value << std::dec << "\n";
-    }
-    std::cout << "---------------------------\n";
-}
-
-// ================== reset ==================
-void SharedMemory::reset() {
-    std::lock_guard<std::mutex> lock(memMutex);
-    std::fill(memory.begin(), memory.end(), 0);
-    accessLog.clear();
-}
-SharedMemoryComponent.cpp
-#include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
-#include "programs/cpu_tlp_shared_cache/widgets/Log.h"
-#include <iostream>
 #include <chrono>
-#include <thread>
 
 namespace cpu_tlp {
 
-    SharedMemoryComponent::SharedMemoryComponent()
-        : m_sharedData(nullptr)
-        , m_executionThread(nullptr)
-        , m_isRunning(false)
+    bool L1Component::initialize(std::shared_ptr<CPUSystemSharedData> sharedData,
+        Interconnect* ic)
+
     {
-    }
 
-    SharedMemoryComponent::~SharedMemoryComponent() {
-        shutdown();
-    }
+        if (m_running.load()) return false;
+        if (!sharedData || !ic) return false;
 
-    bool SharedMemoryComponent::initialize(std::shared_ptr<CPUSystemSharedData> sharedData) {
-        if (m_isRunning) {
-            std::cerr << "[SharedMemory] Component already running!" << std::endl;
-            return false;
-        }
+        m_shared = std::move(sharedData);
 
-        m_sharedData = std::move(sharedData);
+        // 1) Conectar puertos del bus
+        m_portOut = ic->portM2B(m_id);
+        m_portIn = ic->portB2M(m_id);
+        if (!m_portOut || !m_portIn) return false;
 
-        // Log de tamaño
-        log_build_and_print([&](std::ostringstream& oss) {
-            oss << "[SharedMemory] Initializing RAM with "
-                << SharedMemory::MEM_SIZE_BYTES << " bytes ("
-                << SharedMemory::MEM_SIZE_WORDS << " words of 64 bits)\n";
+        // 2) Adjuntar a la L1 y registrar snoop
+        m_l1.attachBus(m_portOut, m_portIn, m_id);
+        ic->attachSnoopCallback(m_id, [this](const SnoopReq& s) {
+            return m_l1.onSnoop(s);
             });
 
-        // Poner el canal RAMConnection en estado conocido
-        if (m_sharedData) {
-            auto& R = m_sharedData->ram_connection;
-            R.request_active.store(false, std::memory_order_release);
-            R.response_ready.store(false, std::memory_order_release);
-            R.write_enable.store(false, std::memory_order_release);
-            R.request_address.store(0, std::memory_order_release);
-            R.write_data.store(0, std::memory_order_release);
-            R.read_data.store(0, std::memory_order_release);
-        }
+        // 3) Reset local
+        m_l1.reset();
 
-        m_isRunning = true;
-        m_sharedData->system_should_stop.store(false, std::memory_order_release);
-
-        m_executionThread = std::make_unique<std::thread>(&SharedMemoryComponent::threadMain, this);
-
-        std::cout << "[SharedMemory] Component initialized successfully" << std::endl;
+        // 4) Lanzar hilo
+        m_running.store(true, std::memory_order_release);
+        m_thr = std::make_unique<std::thread>(&L1Component::threadMain, this);
         return true;
     }
 
-void SharedMemoryComponent::shutdown() {
-    if (!m_isRunning) return;
-    std::cout << "[SharedMemory] Shutting down...\n";
-
-    if (m_sharedData) {
-        m_sharedData->system_should_stop.store(true, std::memory_order_release); // ← en vez de '='
+    void L1Component::shutdown() {
+        if (!m_running.exchange(false)) return;
+        if (m_thr && m_thr->joinable()) m_thr->join();
+        m_thr.reset();
     }
 
-    if (m_executionThread && m_executionThread->joinable()) {
-        m_executionThread->join();
+    CpuReq L1Component::readCpuReq() {
+        CpuReq r{};
+        auto& c = m_shared->cache_connections[m_id];
+
+        // Lectura con acquire: visibilidad de la petición del CPU
+        r.ALUOut_M = c.ALUOut_M.load(std::memory_order_acquire);
+        r.RD_Rm_Special_M = c.RD_Rm_Special_M.load(std::memory_order_acquire);
+        r.C_WE_M = c.C_WE_M.load(std::memory_order_acquire);
+        r.C_ISB_M = c.C_ISB_M.load(std::memory_order_acquire);
+        r.C_REQUEST_M = c.C_REQUEST_M.load(std::memory_order_acquire);
+        r.C_READY_ACK = c.C_READY_ACK.load(std::memory_order_acquire);
+        return r;
     }
-    m_isRunning = false;
-    m_executionThread.reset();
-    std::cout << "[SharedMemory] Shutdown complete\n";
-}
 
-
-    bool SharedMemoryComponent::isRunning() const {
-        return m_isRunning;
+    void L1Component::writeCpuResp(const CpuResp& r) {
+        auto& c = m_shared->cache_connections[m_id];
+        // Publicación con release: el CPU verá dato listo + ready de forma atómica
+        c.RD_C_out.store(r.RD_C_out, std::memory_order_release);
+        c.C_READY.store(r.C_READY, std::memory_order_release);
     }
 
-    void SharedMemoryComponent::threadMain() {
+    void L1Component::threadMain() {
         using namespace std::chrono_literals;
+        while (m_running.load(std::memory_order_acquire) &&
+            !m_shared->system_should_stop.load(std::memory_order_acquire))
+        {
+            // 1) samplear petición de CPU
+            const CpuReq req = readCpuReq();
 
-        std::cout << "[SharedMemory] Thread started" << std::endl;
+            // 2) levantar/bajar FSM (tu L1 ya maneja el handshake C_READY/ACK inside)
+            m_l1.beginAccess(req);
+            m_l1.tick();
 
-        // Atiende peticiones de 64 bits del bus (leer/escribir) vía RAMConnection
-        auto& R = m_sharedData->ram_connection;
+            // 3) publicar salida
+            writeCpuResp(m_l1.output());
 
-        while (!m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
-            // Servicio “poll” con backoff suave
-            if (R.request_active.load(std::memory_order_acquire)) {
-                // Evitá re-atender si ya hay respuesta lista
-                if (!R.response_ready.load(std::memory_order_acquire)) {
-                    const uint16_t addr = R.request_address.load(std::memory_order_acquire);
-                    if (R.write_enable.load(std::memory_order_acquire)) {
-                        // WRITE de 64 bits
-                        const uint64_t w = R.write_data.load(std::memory_order_acquire);
-                        m_memory.write(addr, w);  // fuera de rango => NO-OP (silente)
-                        // Señalizar listo
-                        R.response_ready.store(true, std::memory_order_release);
-                    }
-                    else {
-                        // READ de 64 bits
-                        const uint64_t val = m_memory.read(addr); // fuera de rango => 0
-                        R.read_data.store(val, std::memory_order_release);
-                        R.response_ready.store(true, std::memory_order_release);
-                    }
-                    // Importante: NO limpiar request_active acá; el interconnect lo limpia
-                    // cuando consume response_ready (ver interconnect_bus.cpp).
-                }
-            }
-            else {
-                std::this_thread::sleep_for(5us); // evita busy-wait duro
-            }
+            // Evitar busy-wait extremo, sin perder reactividad
+            std::this_thread::sleep_for(100us);
         }
-
-        std::cout << "[SharedMemory] Thread ending" << std::endl;
     }
 
 } // namespace cpu_tlp
-SharedData.h
-#pragma once
-#include <atomic>
-#include <cstdint>
-
-namespace cpu_tlp {
-
-    // ============================================================================
-    // INSTRUCTION MEMORY CONNECTION (existente)
-    // ============================================================================
-    struct InstructionConnection {
-        std::atomic<uint64_t> PC_F{ 0 };
-        std::atomic<uint64_t> InstrF{ 0 };
-        std::atomic<bool> INS_READY{ false };
-    };
-
-    // ============================================================================
-    // CACHE CONNECTION (existente)
-    // ============================================================================
-    struct CacheConnection {
-        std::atomic<uint64_t> ALUOut_M{ 0 };
-        std::atomic<uint64_t> RD_Rm_Special_M{ 0 };
-        std::atomic<bool> C_WE_M{ false };
-        std::atomic<bool> C_ISB_M{ false };
-        std::atomic<bool> C_REQUEST_M{ false };
-        std::atomic<uint64_t> RD_C_out{ 0 };
-        std::atomic<bool> C_READY{ false };
-        std::atomic<bool> C_READY_ACK{ false };
-    };
-
-    // ============================================================================
-    // RAM CONNECTION (NUEVO - AGREGAR AQUÍ)
-    // ============================================================================
-    struct RAMConnection {
-        std::atomic<uint16_t> request_address{ 0 };
-        std::atomic<uint64_t> write_data{ 0 };
-        std::atomic<bool> write_enable{ false };
-        std::atomic<bool> request_active{ false };
-        std::atomic<uint64_t> read_data{ 0 };
-        std::atomic<bool> response_ready{ false };
-    };
-
-    // ============================================================================
-    // PE CONTROL (existente)
-    // ============================================================================
-    struct PEControl {
-        std::atomic<int> command{ 0 };
-        std::atomic<int> step_count{ 0 };
-        std::atomic<bool> running{ false };
-        std::atomic<bool> should_stop{ false };
-    };
-
-    // ============================================================================
-    // PE REGISTERS SNAPSHOT (existente)
-    // ============================================================================
-    struct PERegistersSnapshot {
-        std::atomic<uint64_t> registers[12];
-        PERegistersSnapshot() {
-            for (int i = 0; i < 12; ++i) {
-                registers[i].store(0, std::memory_order_relaxed);
-            }
-        }
-    };
-
-    // ============================================================================
-    // PE INSTRUCTION TRACKING (existente)
-    // ============================================================================
-    struct PEInstructionTracking {
-        std::atomic<uint64_t> version{ 0 };
-        std::atomic<uint64_t> stage_instructions[5];
-        PEInstructionTracking() {
-            version.store(0, std::memory_order_relaxed);
-            for (int i = 0; i < 5; ++i) {
-                stage_instructions[i].store(0, std::memory_order_relaxed);
-            }
-        }
-    };
-
-    // ============================================================================
-    // UI SIGNALS (existente)
-    // ============================================================================
-    struct UISignals {
-        std::atomic<uint32_t> swi_count{ 0 };
-    };
-
-    // ============================================================================
-    // MAIN SHARED DATA STRUCTURE (existente + modificación)
-    // ============================================================================
-    struct CPUSystemSharedData {
-        std::atomic<bool> system_should_stop{ false };
-
-        InstructionConnection instruction_connections[4];
-        CacheConnection cache_connections[4];
-        RAMConnection ram_connection;  // AGREGAR ESTA LÍNEA
-
-        PEControl pe_control[4];
-        PERegistersSnapshot pe_registers[4];
-        PEInstructionTracking pe_instruction_tracking[4];
-        UISignals ui_signals[4];
-    };
-
-} // namespace cpu_tlp
-CpuTLPControlAPI.h
-#pragma once
-#include <functional>
-
-namespace cpu_tlp_ui {
-    // PE0 callbacks
-    inline std::function<void()>        onResetPE0;
-    inline std::function<void()>        onStepPE0;
-    inline std::function<void(int)>     onStepUntilPE0;
-    inline std::function<void()>        onStepIndefinitelyPE0;
-    inline std::function<void()>        onStopPE0;
-
-    // PE1 callbacks
-    inline std::function<void()>        onResetPE1;
-    inline std::function<void()>        onStepPE1;
-    inline std::function<void(int)>     onStepUntilPE1;
-    inline std::function<void()>        onStepIndefinitelyPE1;
-    inline std::function<void()>        onStopPE1;
-
-    // PE2 callbacks
-    inline std::function<void()>        onResetPE2;
-    inline std::function<void()>        onStepPE2;
-    inline std::function<void(int)>     onStepUntilPE2;
-    inline std::function<void()>        onStepIndefinitelyPE2;
-    inline std::function<void()>        onStopPE2;
-
-    // PE3 callbacks
-    inline std::function<void()>        onResetPE3;
-    inline std::function<void()>        onStepPE3;
-    inline std::function<void(int)>     onStepUntilPE3;
-    inline std::function<void()>        onStepIndefinitelyPE3;
-    inline std::function<void()>        onStopPE3;
-}
-CpuTLPSharedCacheState.h
-#pragma once
-#include "core/State.h"
-#include <memory>
-#include <array>
-#include <string>
-#include <deque>
-
-class ICpuTLPView;
-
-#include "programs/cpu_tlp_shared_cache/components/InstructionMemoryComponent.h"
-#include "programs/cpu_tlp_shared_cache/components/SharedData.h"
-#include "programs/cpu_tlp_shared_cache/components/PE0Component.h"
-#include "programs/cpu_tlp_shared_cache/components/PE1Component.h"
-#include "programs/cpu_tlp_shared_cache/components/PE2Component.h"
-#include "programs/cpu_tlp_shared_cache/components/PE3Component.h"
-#include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
-
-class CpuTLPSharedCacheState : public State {
-public:
-    explicit CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindow* win);
-    ~CpuTLPSharedCacheState() override;
-
-    void handleEvent(sf::Event& event) override;
-    void update(float dt) override;
-    void render() override;
-    void renderBackground() override;
-
-    // PE0 control
-    void resetPE0();
-    void stepPE0();
-    void stepUntilPE0(int steps);
-    void stepIndefinitelyPE0();
-    void stopPE0();
-
-    // PE1 control
-    void resetPE1();
-    void stepPE1();
-    void stepUntilPE1(int steps);
-    void stepIndefinitelyPE1();
-    void stopPE1();
-
-    // PE2 control
-    void resetPE2();
-    void stepPE2();
-    void stepUntilPE2(int steps);
-    void stepIndefinitelyPE2();
-    void stopPE2();
-
-    // PE3 control
-    void resetPE3();
-    void stepPE3();
-    void stepUntilPE3(int steps);
-    void stepIndefinitelyPE3();
-    void stopPE3();
-
-private:
-    enum class Panel {
-        Compiler = 0,
-        GeneralView,
-        PE0CPU,
-        PE0Reg,
-        PE0Mem,
-        PE1CPU,
-        PE1Reg,
-        PE1Mem,
-        PE2CPU,
-        PE2Reg,
-        PE2Mem,
-        PE3CPU,
-        PE3Reg,
-        PE3Mem,
-        RAM,
-        AnalysisData
-    };
-
-    static constexpr size_t kPanelCount = 16;
-    static constexpr size_t panelIndex(Panel p) { return static_cast<size_t>(p); }
-
-    Panel m_selected = Panel::Compiler;
-    std::array<std::unique_ptr<ICpuTLPView>, kPanelCount> m_views;
-
-    bool sidebarButton(const char* label, bool selected, float width, float height);
-    void buildAllViews();
-    ICpuTLPView* getView(Panel p);
-
-    // Componentes asíncronos
-    std::unique_ptr<cpu_tlp::InstructionMemoryComponent> m_instructionMemory;
-    std::unique_ptr<cpu_tlp::PE0Component> m_pe0;
-    std::unique_ptr<cpu_tlp::PE1Component> m_pe1;
-    std::unique_ptr<cpu_tlp::PE2Component> m_pe2;
-    std::unique_ptr<cpu_tlp::PE3Component> m_pe3;
-    std::shared_ptr<cpu_tlp::CPUSystemSharedData> m_cpuSystemData;
-    std::unique_ptr<cpu_tlp::SharedMemoryComponent> m_sharedMemoryComponent;
-
-    friend class PE0RegView;
-    friend class PE1RegView;
-    friend class PE2RegView;
-    friend class PE3RegView;
-
-    std::array<uint32_t, 4> m_swiSeenCount{};
-    std::deque<int> m_swiQueue;
-    int m_activeSwiPopupPe = -1;
-
-    static std::string makeSwiPopupId(int pe) {
-        return "SWI##PE" + std::to_string(pe);
-    }
-};
-l1_fsm.cpp
+//l1_fsm.cpp
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_utils.h"
 #include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h" // MasterToBus / BusToMaster
+#include <iostream>
+
+// --------- util de logging: imprime sólo cuando cambia el valor ----------
+#define CONCAT_IMPL(x,y) x##y
+#define CONCAT(x,y) CONCAT_IMPL(x,y)
+#define LOG_ON_CHANGE(TAG, EXPR) do {                                \
+  static auto CONCAT(_last_, __LINE__) = (EXPR);                     \
+  auto        CONCAT(_now_,  __LINE__) = (EXPR);                     \
+  if (CONCAT(_now_, __LINE__) != CONCAT(_last_, __LINE__)) {         \
+    std::cout << TAG << (CONCAT(_now_, __LINE__)) << "\n";           \
+    CONCAT(_last_, __LINE__) = CONCAT(_now_, __LINE__);              \
+  }                                                                  \
+} while(0)
+
+static const char* stateName(L1State s) {
+    switch (s) {
+    case L1State::IDLE:       return "IDLE";
+    case L1State::LOOKUP:     return "LOOKUP";
+    case L1State::WAIT_ACK:   return "WAIT_ACK";
+    case L1State::REQ_BUS:    return "REQ_BUS";
+    case L1State::WAIT_GRANT: return "WAIT_GRANT";
+    case L1State::WAIT_DATA:  return "WAIT_DATA";
+    case L1State::FILL:       return "FILL";
+    default:                  return "?";
+    }
+}
 
 L1Cache::L1Cache() { reset(); }
 
 void L1Cache::reset() {
-  for (auto& s : sets_) {
-    s.lru = 0;
-    for (auto& w : s.ways) {
-      w.tag = 0; w.state = Mesi::I; w.valid = false; w.data.fill(0);
+    std::lock_guard<std::mutex> lk(mtx_);
+    for (auto& s : sets_) {
+        s.lru = 0;
+        for (auto& w : s.ways) {
+            w.tag = 0; w.state = Mesi::I; w.valid = false; w.data.fill(0);
+        }
     }
-  }
-  out_.C_READY = false; out_.RD_C_out = 0;
-  fsm_ = L1State::IDLE;
-  in_ = {};
-  pend_ = {};
-  temp_fill_.fill(0);
+    out_.C_READY = false; out_.RD_C_out = 0;
+    fsm_ = L1State::IDLE;
+    in_ = {};
+    pend_ = {};
+    temp_fill_.fill(0);
 }
 
 void L1Cache::beginAccess(const CpuReq& req) {
-  in_ = req;
-  if (fsm_ == L1State::WAIT_ACK && in_.C_READY_ACK) {
-    out_.C_READY = false;
-    fsm_ = L1State::IDLE;
-    return;
-  }
-  if (fsm_ == L1State::IDLE && in_.C_REQUEST_M && !out_.C_READY) {
-    fsm_ = L1State::LOOKUP;
-  }
+    std::lock_guard<std::mutex> lk(mtx_);
+    in_ = req;
+
+    // Handshake rápido: si estaba esperando ACK y ya llegó, bajar READY y volver a IDLE
+    if (fsm_ == L1State::WAIT_ACK && in_.C_READY_ACK) {
+        out_.C_READY = false;
+        fsm_ = L1State::IDLE;
+        return;
+    }
+
+    // Nuevo acceso desde CPU
+    if (fsm_ == L1State::IDLE && in_.C_REQUEST_M && !out_.C_READY) {
+        fsm_ = L1State::LOOKUP;
+    }
 }
 
 void L1Cache::tick() {
+    std::lock_guard<std::mutex> lk(mtx_);
     using std::memory_order_acquire;
     using std::memory_order_release;
     using std::memory_order_relaxed;
     using std::memory_order_acq_rel;
 
+    // --------- LOG COMPACTO: sólo cambios de estado/señales ----------
+    {
+        static L1State last = L1State::IDLE;
+        if (fsm_ != last) {
+            std::cout << "[L1" << l1_id_ << "] FSM: " << stateName(last)
+                << " -> " << stateName(fsm_) << "\n";
+            last = fsm_;
+        }
+        if (pm_out_) LOG_ON_CHANGE("[L1] B_REQ=", pm_out_->B_REQ.load(memory_order_acquire));
+        if (pm_in_) {
+            LOG_ON_CHANGE("[L1] B_GRANT=", pm_in_->B_GRANT.load(memory_order_acquire));
+            LOG_ON_CHANGE("[L1] B_RVALID=", pm_in_->B_RVALID.load(memory_order_acquire));
+            LOG_ON_CHANGE("[L1] B_DONE=", pm_in_->B_DONE.load(memory_order_acquire));
+        }
+    }
+    // ----------------------------------------------------------------
+
     switch (fsm_) {
 
-        // ------------------------------------------------------
     case L1State::LOOKUP: {
         const auto p = splitAddress(in_.ALUOut_M);
         auto& set = sets_[p.set];
@@ -4070,7 +1884,7 @@ void L1Cache::tick() {
             auto& line = set.ways[hit_way];
 
             if (!in_.C_WE_M) {
-                // ===== READ HIT (LDR / LDRB)
+                // READ HIT (LDR / LDRB)
                 if (in_.C_ISB_M)
                     out_.RD_C_out = static_cast<uint64_t>(read8_in_line(line, p.byte_in_line));
                 else if ((p.off & 0x7) == 0)
@@ -4084,16 +1898,15 @@ void L1Cache::tick() {
 
             }
             else {
-                // ===== WRITE
+                // WRITE
                 if (line.state == Mesi::S) {
                     // Write-hit en S → necesita exclusividad: BusUpgr
                     pend_ = {};
                     pend_.cmd = BusCmd::BusUpgr;
                     pend_.req_addr_line = (in_.ALUOut_M & ~((1ULL << OFFSET_BITS) - 1ULL));
                     pend_.set = p.set;
-                    pend_.victim = hit_way; // no reemplazamos, solo cambiamos estado luego
+                    pend_.victim = hit_way;
 
-                    // Solicitar bus: payloads → WVALID → B_REQ
                     if (pm_out_) {
                         pm_out_->B_CMD = BusCmd::BusUpgr;
                         pm_out_->B_ADDR = pend_.req_addr_line;
@@ -4123,7 +1936,7 @@ void L1Cache::tick() {
             }
         }
         else {
-            // ===== MISS
+            // MISS
             pend_ = {};
             pend_.req_addr_line = (in_.ALUOut_M & ~((1ULL << OFFSET_BITS) - 1ULL));
             pend_.set = p.set;
@@ -4157,13 +1970,11 @@ void L1Cache::tick() {
         }
     } break;
 
-                        // ------------------------------------------------------
     case L1State::REQ_BUS: {
-        // Nada: esperamos B_GRANT
+        // esperar arbitraje
         fsm_ = L1State::WAIT_GRANT;
     } break;
 
-                         // ------------------------------------------------------
     case L1State::WAIT_GRANT: {
         if (pm_in_ && pm_in_->B_GRANT.load(memory_order_acquire)) {
             // Flags efímeros (relaxed)
@@ -4173,7 +1984,6 @@ void L1Cache::tick() {
         }
     } break;
 
-                            // ------------------------------------------------------
     case L1State::WAIT_DATA: {
         if (!pm_in_) break;
 
@@ -4188,16 +1998,16 @@ void L1Cache::tick() {
 
         // Cierre de la transacción actual (consumir DONE una sola vez)
         if (pm_in_->B_DONE.exchange(false, memory_order_acq_rel)) {
-            // ¿Era un WriteBack previo?
+
+            // ¿Era un WriteBack previo? → reemitir la tx real
             if (pm_out_ && pm_out_->B_CMD == BusCmd::WriteBack) {
-                // Para publicar el nuevo payload con garantías, toggle de B_REQ
                 pm_out_->B_REQ.store(false, memory_order_release);     // edge de baja
                 pm_out_->B_CMD = pend_.cmd;
                 pm_out_->B_ADDR = pend_.req_addr_line;
                 pm_out_->B_WVALID.store(false, memory_order_relaxed);
                 pend_.saw_shared = false;
                 pend_.saw_hitm = false;
-                pm_out_->B_REQ.store(true, memory_order_release);      // edge de subida (publica payload)
+                pm_out_->B_REQ.store(true, memory_order_release);      // edge de subida
                 fsm_ = L1State::WAIT_GRANT; // re-entrar al grant de la tx real
                 break;
             }
@@ -4207,7 +2017,6 @@ void L1Cache::tick() {
         }
     } break;
 
-                           // ------------------------------------------------------
     case L1State::FILL: {
         const auto p = splitAddress(in_.ALUOut_M);
         auto& set = sets_[pend_.set];
@@ -4218,7 +2027,6 @@ void L1Cache::tick() {
             if (way >= 0) {
                 auto& line = set.ways[way];
                 line.state = Mesi::M;
-                // Aplicar el store pendiente (el CPU mantiene la misma req)
                 if (in_.C_ISB_M) {
                     write8_in_line(line, p.byte_in_line,
                         static_cast<uint8_t>(in_.RD_Rm_Special_M & 0xFF));
@@ -4226,12 +2034,9 @@ void L1Cache::tick() {
                 else if ((p.off & 0x7) == 0) {
                     write64_in_line(line, p.dw_in_line, in_.RD_Rm_Special_M);
                 }
-                // LRU
                 set.lru = (way == 0) ? 0 : 1;
             }
-            // Responder al CPU
             out_.C_READY = true;
-            // Soltar el bus (release)
             if (pm_out_) {
                 pm_out_->B_WVALID.store(false, memory_order_release);
                 pm_out_->B_REQ.store(false, memory_order_release);
@@ -4259,7 +2064,6 @@ void L1Cache::tick() {
         }
         else { // BusRdX (RFO) => terminar en M y aplicar el store
             vict.state = Mesi::M;
-
             if (in_.C_ISB_M)
                 write8_in_line(vict, p.byte_in_line,
                     static_cast<uint8_t>(in_.RD_Rm_Special_M & 0xFF));
@@ -4273,7 +2077,7 @@ void L1Cache::tick() {
         // Handshake al CPU
         out_.C_READY = true;
 
-        // Soltar el bus (release)
+        // Soltar el bus
         if (pm_out_) {
             pm_out_->B_WVALID.store(false, memory_order_release);
             pm_out_->B_REQ.store(false, memory_order_release);
@@ -4282,7 +2086,6 @@ void L1Cache::tick() {
         fsm_ = L1State::WAIT_ACK;
     } break;
 
-                      // ------------------------------------------------------
     case L1State::WAIT_ACK: {
         if (in_.C_READY_ACK) {
             out_.C_READY = false;
@@ -4290,17 +2093,748 @@ void L1Cache::tick() {
         }
     } break;
 
-                          // ------------------------------------------------------
-
+    default: break;
     }
 }
 
-
 int L1Cache::findWay(uint32_t set, uint64_t tag) const {
-  const auto& cs = sets_[set];
-  for (int w = 0; w < (int)WAYS; ++w) {
-    const auto& line = cs.ways[w];
-    if (line.valid && line.state != Mesi::I && line.tag == tag) return w;
-  }
-  return -1;
+    const auto& cs = sets_[set];
+    for (int w = 0; w < (int)WAYS; ++w) {
+        const auto& line = cs.ways[w];
+        if (line.valid && line.state != Mesi::I && line.tag == tag) return w;
+    }
+    return -1;
 }
+
+
+//l1_snoop.cpp
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_utils.h"
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"
+#include <iostream>
+#define SNOOPLOG(MSG) do{ std::cout << "[L1Snoop] " << MSG << std::endl; }while(0)
+
+
+SnoopResp L1Cache::onSnoop(const SnoopReq & s) {
+    SnoopResp r{};  // has_shared=false, has_mod=false, inv_ack=false, rvalid=false
+
+    // OJO: s.addr_line viene alineada a línea (bits [OFFSET_BITS-1:0] = 0)
+    const auto a = splitAddress(s.addr_line);
+
+    // Buscar la línea en mi caché
+    auto& set = sets_[a.set];
+    int way = findWay(a.set, a.tag);   // -1 si no está
+    if (way < 0) return r;
+
+    auto& line = set.ways[way];
+    if (!line.valid || line.tag != a.tag) return r;
+
+    // Presencia/dirty para el bus
+    const bool isS = (line.state == Mesi::S);
+    const bool isE = (line.state == Mesi::E);
+    const bool isM = (line.state == Mesi::M);
+    r.has_shared = (isS || isE || isM);   // cualquier copia marca shared
+    r.has_mod = isM;                   // solo M marca HITM
+
+    switch (s.cmd) {
+    case BusCmd::BusRd: {
+        // Lectura compartible: si yo tengo M y me piden datos -> servir si grant_data
+        if (isM && s.grant_data) {
+            r.rdata = line.data;
+            r.rvalid = true;
+        }
+        // Degradaciones: M/E -> S
+        if (isM || isE) line.state = Mesi::S;
+    } break;
+
+    case BusCmd::BusRdX: {
+        // Read-for-ownership (RFO): invalidar a terceros; si yo tenía M y me piden datos, los doy
+        if (isM && s.grant_data) {
+            r.rdata = line.data;
+            r.rvalid = true;
+        }
+        if (line.state != Mesi::I) {
+            line.state = Mesi::I;
+            line.valid = false;   // si manejás 'valid' aparte del estado
+            r.inv_ack = true;    // confirmo invalidación
+        }
+    } break;
+
+    case BusCmd::BusUpgr: {
+        // Upgrade del solicitante (tenía S y quiere M): yo invalido si compartía
+        if (isS || isE) {
+            line.state = Mesi::I;
+            line.valid = false;
+            r.inv_ack = true;
+        }
+    } break;
+
+    case BusCmd::WriteBack:
+    default:
+        // No acción necesaria en pares
+        break;
+    }
+
+    return r;
+}
+#pragma once
+#include <vector>
+#include <functional>
+#include <cstdint>
+#include <atomic>
+#include <mutex>
+
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"   // BusCmd, LineData, OFFSET_BITS
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"  // SnoopReq, SnoopResp
+
+namespace cpu_tlp { struct RAMConnection; }
+
+// ============================================================
+// Señales L1 → Interconnect
+// ============================================================
+struct MasterToBus {
+    std::atomic<bool> B_REQ{ false };      // solicita bus (publ. payloads → set true)
+    BusCmd   B_CMD{ BusCmd::BusRd };       // payload
+    uint64_t B_ADDR{ 0 };                  // payload (línea alineada)
+    LineData B_WDATA{};                    // payload (línea a volcar)
+    std::atomic<bool> B_WVALID{ false };   // flag: hay WDATA válido
+};
+
+// ============================================================
+// Señales Interconnect → L1
+// ============================================================
+struct BusToMaster {
+    std::atomic<bool> B_GRANT{ false };        // grant del bus
+    std::atomic<bool> B_SHARED_SEEN{ false };  // algún otro tiene copia
+    std::atomic<bool> B_HITM_SEEN{ false };    // alguien tenía M (dirty)
+    std::atomic<bool> B_RVALID{ false };       // datos válidos (pulso one-shot)
+    LineData          B_RDATA{};               // payload (no atómico)
+    std::atomic<bool> B_DONE{ false };         // fin de transacción (pulso one-shot)
+    std::atomic<bool> B_WREADY{ true };        // listo para aceptar WDATA
+};
+
+// ============================================================
+// Interconnect con soporte de DRAM (RAMConnection) y coherencia MESI
+// ============================================================
+class Interconnect {
+public:
+    explicit Interconnect(int num_l1)
+        : m2b_(num_l1), b2m_(num_l1), rr_ptr_(0),
+        req_edge_block_(num_l1, false)                     // ← edge-block por master
+    {
+        sn_cb_.resize(num_l1);
+    }
+
+    // Puertos por L1 (para conectar en attachBus)
+    MasterToBus* portM2B(int id) { return &m2b_[id]; }
+    BusToMaster* portB2M(int id) { return &b2m_[id]; }
+
+    // Callback de snoop (bus → L1.onSnoop)
+    void attachSnoopCallback(int id, std::function<SnoopResp(const SnoopReq&)> cb) {
+        std::lock_guard<std::mutex> lk(cb_mtx_);
+        sn_cb_[id] = std::move(cb);
+    }
+
+    // Enlazar backend de DRAM (canal atómico del SharedMemoryComponent)
+    void bindRAM(cpu_tlp::RAMConnection* ram) { ram_ = ram; }
+
+    // Avanza un ciclo de bus
+    void tick();
+
+private:
+    struct ActiveTx {
+        bool     busy{ false };
+        int      owner{ -1 };
+        BusCmd   cmd{ BusCmd::BusRd };
+        uint64_t addr_line{ 0 };
+
+        bool     seen_shared{ false };
+        bool     seen_hitm{ false };
+        int      m_owner{ -1 };
+
+        int      inv_acks_needed{ 0 };
+        int      inv_acks_got{ 0 };
+
+        bool     have_rdata{ false };
+        LineData rdata{};      // buffer línea leída (C2C o DRAM)
+        LineData wb_line{};    // buffer para WriteBack → DRAM
+
+        // FSM de memoria (DRAM)
+        enum class MemPhase { None, ReadReq, ReadWait, WriteReq, WriteWait } mem{ MemPhase::None };
+        int      seg{ 0 };     // beat 0..3 (cada beat = 8 bytes)
+
+        // One-shot flags para señales al master
+        bool     signaled_rvalid{ false };
+        bool     signaled_done{ false };
+
+        void clear() { *this = ActiveTx{}; }
+    };
+
+    std::vector<MasterToBus>  m2b_;
+    std::vector<BusToMaster>  b2m_;
+    std::vector<std::function<SnoopResp(const SnoopReq&)>> sn_cb_;
+    mutable std::mutex cb_mtx_;
+
+    int rr_ptr_{ 0 };
+    ActiveTx tx_{};
+
+    // Backend DRAM (atomics del SharedMemory)
+    cpu_tlp::RAMConnection* ram_{ nullptr };
+
+    // Ignorar B_REQ de un master hasta que baje (edge-trigger)
+    std::vector<bool> req_edge_block_;
+
+    // --- Utilidades internas ---
+    int  pickOwnerRR();
+    void clearOutputs();
+
+    static uint16_t idx64(uint64_t addr_line);
+
+    // DRAM adapters (línea de 32B en 4 beats de 64b)
+    void startMemReadLine();
+    bool stepMemReadLine();   // true cuando tx_.rdata está completa
+
+    void startMemWriteLine();
+    bool stepMemWriteLine();  // true cuando la línea se escribió completa
+};
+
+//l1_cash.h
+#ifndef L1_CACHE_H
+#define L1_CACHE_H
+
+#include <array>
+#include <cstdint>
+#include <cstddef>
+#include <mutex>
+
+// ============================================================
+// Parámetros del MVP (como ya tenías)
+// ============================================================
+constexpr std::size_t LINE_BYTES = 32;  // 32 bytes por línea
+constexpr std::size_t WAYS       = 2;   // 2-way set associative
+constexpr std::size_t SETS       = 8;   // número de conjuntos
+
+static_assert((SETS & (SETS - 1)) == 0, "SETS debe ser potencia de 2");
+
+constexpr int ilog2(std::size_t n) { return (n <= 1) ? 0 : 1 + ilog2(n >> 1); }
+constexpr int OFFSET_BITS = ilog2(LINE_BYTES);             // =5
+constexpr int INDEX_BITS  = ilog2(SETS);                   // =3 si SETS=8
+constexpr int TAG_BITS    = 64 - OFFSET_BITS - INDEX_BITS; // =56
+
+// ============================================================
+// MESI y Bus
+// ============================================================
+enum class Mesi   : uint8_t { I=0, S=1, E=2, M=3 };
+
+// Canal snoop (definido en snoop_if.h)
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h" // BusCmd, SnoopReq, SnoopResp, LineData
+
+// Forward-decl de puertos del bus (definidos en interconnect_bus.h)
+struct MasterToBus;
+struct BusToMaster;
+
+// ============================================================
+// Estructuras básicas de la caché
+// ============================================================
+using LineDataAlias = LineData; // alias local si lo prefieres
+
+struct CacheLine {
+  uint64_t  tag   = 0;
+  Mesi      state = Mesi::I;
+  LineData  data  {};
+  bool      valid = false;
+};
+
+struct CacheSet {
+  std::array<CacheLine, WAYS> ways{};
+  uint8_t lru = 0; // 0 = way0 fue la más reciente
+};
+
+struct AddrParts {
+  uint64_t tag;
+  uint32_t set;
+  uint32_t off;
+  uint8_t  dw_in_line;   // palabra de 64 bits dentro de la línea (0..3)
+  uint8_t  byte_in_line; // byte dentro de la línea (0..31)
+};
+
+// ============================================================
+// Interfaz CPU ↔ L1
+// ============================================================
+struct CpuReq {
+  bool     C_REQUEST_M{false};   // solicitud activa
+  bool     C_WE_M{false};        // 0=read, 1=write
+  bool     C_ISB_M{false};       // 1=byte, 0=64-bit
+  uint64_t ALUOut_M{0};          // dirección
+  uint64_t RD_Rm_Special_M{0};   // dato a escribir (si write)
+  bool     C_READY_ACK{false};   // handshake del CPU
+};
+
+struct CpuResp {
+  bool     C_READY{false};       // respuesta lista
+  uint64_t RD_C_out{0};          // dato leído (si read)
+};
+
+// ============================================================
+// FSM de la L1
+// ============================================================
+enum class L1State : uint8_t {
+  IDLE, LOOKUP, MISS, WAIT_ACK,
+  REQ_BUS, WAIT_GRANT, WAIT_DATA, FILL
+};
+
+// ============================================================
+// Clase principal L1Cache
+// ============================================================
+class L1Cache {
+public:
+  L1Cache();
+
+  mutable std::mutex mtx_;
+
+  // --- Interfaz principal ---
+  void reset();
+  void beginAccess(const CpuReq& req);
+  void tick();
+  CpuResp output() const { return out_; }
+
+  // --- Cableado al bus ---
+  void attachBus(MasterToBus* out_port, BusToMaster* in_port, int my_id) {
+    pm_out_ = out_port; pm_in_ = in_port; l1_id_ = my_id;
+  }
+
+  // --- Coherencia (MESI) ---
+  SnoopResp onSnoop(const SnoopReq& s);
+
+  // --- Utilidades ---
+  static constexpr int offsetBits() { return OFFSET_BITS; }
+  static constexpr int indexBits()  { return INDEX_BITS;  }
+  static constexpr int tagBits()    { return TAG_BITS;    }
+
+private:
+  // ---- Helpers públicos en .cpp ----
+  friend AddrParts splitAddress(uint64_t addr);
+  int findWay(uint32_t set, uint64_t tag) const;
+
+  // ---- Estado interno ----
+  std::array<CacheSet, SETS> sets_{};
+  L1State  fsm_{L1State::IDLE};
+  CpuReq   in_{};
+  CpuResp  out_{};
+
+  // ---- Puertos de bus ----
+  MasterToBus* pm_out_{nullptr};  // L1 → Bus
+  BusToMaster* pm_in_{nullptr};   // Bus → L1
+  int          l1_id_{-1};
+
+  // ---- Contexto de transacción pendiente (para MISS/Upgr/WB) ----
+  struct PendingTx {
+    BusCmd   cmd{BusCmd::BusRd};
+    uint64_t req_addr_line{0};     // línea solicitada (alineada)
+    uint32_t set{0};
+    int      victim{-1};
+
+    // WriteBack de víctima M (previo al fill)
+    bool     need_wb{false};
+    uint64_t victim_addr_line{0};
+    LineData wb_line{};
+
+    // Flags observados del bus
+    bool     saw_shared{false};
+    bool     saw_hitm{false};
+  } pend_;
+
+  LineData temp_fill_{}; // buffer de línea recibida para FILL
+};
+
+#endif // L1_CACHE_H
+//interconnect_bus.cpp
+#include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h"
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"
+#include "programs/cpu_tlp_shared_cache/components/SharedData.h" // cpu_tlp::RAMConnection
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
+
+#include <iostream>
+#include <mutex>
+
+namespace {
+    constexpr bool DBG_BUS = true;            // poné false para silenciar
+    std::mutex g_dbg_mtx;
+
+#define BUSLOG(MSG_EXPR) do { \
+        if (DBG_BUS) { \
+            std::lock_guard<std::mutex> _lk(g_dbg_mtx); \
+            std::cout << "[Bus] " << MSG_EXPR << std::endl; \
+        } \
+    } while(0)
+}
+
+// --- helpers de dirección ---
+static inline uint64_t align_to_line(uint64_t a) {
+    constexpr uint64_t MASK = ~((1ULL << OFFSET_BITS) - 1ULL);
+    return a & MASK;
+}
+
+uint16_t Interconnect::idx64(uint64_t addr_line) {
+    // 4 KiB de ventana => devolver base EN BYTES (no /8)
+    return static_cast<uint16_t>(addr_line & 0xFFFULL);
+}
+
+// --- limpieza de salidas por ciclo ---
+void Interconnect::clearOutputs() {
+    const bool can_accept_wb = !(tx_.busy && tx_.mem != ActiveTx::MemPhase::None);
+    for (auto& o : b2m_) {
+        o.B_GRANT.store(false, std::memory_order_relaxed);
+        o.B_SHARED_SEEN.store(false, std::memory_order_relaxed);
+        o.B_HITM_SEEN.store(false, std::memory_order_relaxed);
+        // NO limpiar aquí: RVALID/DONE las baja la L1 con exchange(false)
+        o.B_WREADY.store(can_accept_wb, std::memory_order_relaxed);
+    }
+}
+
+// --- RR arbiter con edge-block ---
+int Interconnect::pickOwnerRR() {
+    const int N = (int)m2b_.size();
+    for (int i = 0; i < N; ++i) {
+        int k = (rr_ptr_ + i) % N;
+        if (!req_edge_block_[k] && m2b_[k].B_REQ.load(std::memory_order_acquire)) {
+            rr_ptr_ = (k + 1) % N;
+            return k;
+        }
+    }
+    return -1;
+}
+
+// --- DRAM: iniciar lectura de línea (4 beats de 64b) ---
+void Interconnect::startMemReadLine() {
+    tx_.mem = ActiveTx::MemPhase::ReadReq;
+    tx_.seg = 0;
+}
+
+// Devuelve true cuando ya está completa en tx_.rdata
+bool Interconnect::stepMemReadLine() {
+    if (!ram_) { // fallback: responde ceros para no colgarse
+        if (tx_.seg == 0) {
+            tx_.rdata.fill(0);
+            tx_.seg = 4;
+        }
+        tx_.mem = ActiveTx::MemPhase::None;
+        return true;
+    }
+
+    if (tx_.mem == ActiveTx::MemPhase::ReadReq) {
+        auto& R = *ram_;
+        if (!R.request_active.load(std::memory_order_acquire)) {
+            R.write_enable.store(false, std::memory_order_release);
+            // EN BYTES: base + seg*8
+            R.request_address.store(static_cast<uint16_t>(idx64(tx_.addr_line) + tx_.seg * 8),
+                std::memory_order_release);
+            R.request_active.store(true, std::memory_order_release);
+            tx_.mem = ActiveTx::MemPhase::ReadWait;
+        }
+        return false;
+    }
+
+    if (tx_.mem == ActiveTx::MemPhase::ReadWait) {
+        auto& R = *ram_;
+        if (R.response_ready.load(std::memory_order_acquire)) {
+            uint64_t w = R.read_data.load(std::memory_order_acquire);
+
+            // Copiar 8 bytes little-endian al buffer de línea
+            const int off = tx_.seg * 8;
+            for (int i = 0; i < 8; ++i)
+                tx_.rdata[off + i] = static_cast<uint8_t>((w >> (i * 8)) & 0xFF);
+
+            // limpiar flags del canal
+            R.response_ready.store(false, std::memory_order_release);
+            R.request_active.store(false, std::memory_order_release);
+
+            // siguiente beat
+            tx_.seg++;
+            tx_.mem = (tx_.seg < 4) ? ActiveTx::MemPhase::ReadReq
+                : ActiveTx::MemPhase::None;
+
+            return (tx_.seg >= 4); // true = línea completa
+        }
+        return false;
+    }
+
+    return (tx_.seg >= 4);
+}
+
+// --- DRAM: iniciar escritura de línea (4 beats de 64b) ---
+void Interconnect::startMemWriteLine() {
+    tx_.mem = ActiveTx::MemPhase::WriteReq;
+    tx_.seg = 0;
+}
+
+bool Interconnect::stepMemWriteLine() {
+    if (!ram_) { // fallback: “aceptar y olvidar”
+        tx_.seg = 4;
+        tx_.mem = ActiveTx::MemPhase::None;
+        return true;
+    }
+
+    if (tx_.mem == ActiveTx::MemPhase::WriteReq) {
+        auto& R = *ram_;
+        if (!R.request_active.load(std::memory_order_acquire)) {
+            // Empacar 8 bytes desde wb_line (little-endian)
+            uint64_t w = 0;
+            const int off = tx_.seg * 8;
+            for (int i = 0; i < 8; ++i)
+                w |= (static_cast<uint64_t>(tx_.wb_line[off + i]) << (i * 8));
+
+            R.write_data.store(w, std::memory_order_release);
+            R.write_enable.store(true, std::memory_order_release);
+            // EN BYTES: base + seg*8
+            R.request_address.store(static_cast<uint16_t>(idx64(tx_.addr_line) + tx_.seg * 8),
+                std::memory_order_release);
+            R.request_active.store(true, std::memory_order_release);
+
+            tx_.mem = ActiveTx::MemPhase::WriteWait;
+        }
+        return false;
+    }
+
+    if (tx_.mem == ActiveTx::MemPhase::WriteWait) {
+        auto& R = *ram_;
+        if (R.response_ready.load(std::memory_order_acquire)) {
+            // limpiar flags del canal
+            R.response_ready.store(false, std::memory_order_release);
+            R.request_active.store(false, std::memory_order_release);
+
+            // siguiente beat
+            tx_.seg++;
+            tx_.mem = (tx_.seg < 4) ? ActiveTx::MemPhase::WriteReq
+                : ActiveTx::MemPhase::None;
+
+            return (tx_.seg >= 4); // true = línea escrita completa
+        }
+        return false;
+    }
+
+    return (tx_.seg >= 4);
+}
+
+// --- ciclo principal ---
+void Interconnect::tick() {
+    clearOutputs();
+
+    // Mantener GRANT alto mientras haya transacción activa
+    if (tx_.busy && tx_.owner >= 0)
+        b2m_[tx_.owner].B_GRANT.store(true, std::memory_order_relaxed);
+
+    // Desbloquear masters que ya bajaron B_REQ (edge)
+    for (size_t i = 0; i < m2b_.size(); ++i) {
+        if (req_edge_block_[i] && !m2b_[i].B_REQ.load(std::memory_order_acquire)) {
+            req_edge_block_[i] = false;
+        }
+    }
+
+    // 0) Avanzar DRAM si está en curso (cede el tick)
+    if (tx_.busy && tx_.mem != ActiveTx::MemPhase::None) {
+        bool mem_done = false;
+
+        switch (tx_.mem) {
+        case ActiveTx::MemPhase::ReadReq:
+        case ActiveTx::MemPhase::ReadWait: {
+            mem_done = stepMemReadLine();
+            if (mem_done) {
+                BUSLOG("DRAM READ done owner=" << tx_.owner
+                    << " addr_line=0x" << std::hex << tx_.addr_line << std::dec);
+
+                // One-shot RVALID/DONE
+                if (!tx_.signaled_rvalid) {
+                    b2m_[tx_.owner].B_RDATA = tx_.rdata;
+                    b2m_[tx_.owner].B_RVALID.store(true, std::memory_order_release);
+                    tx_.signaled_rvalid = true;
+                }
+                if (!tx_.signaled_done) {
+                    b2m_[tx_.owner].B_DONE.store(true, std::memory_order_release);
+                    tx_.signaled_done = true;
+                }
+
+                req_edge_block_[tx_.owner] = true;  // exigir flanco de B_REQ
+                tx_.busy = false;
+            }
+            break;
+        }
+        case ActiveTx::MemPhase::WriteReq:
+        case ActiveTx::MemPhase::WriteWait: {
+            mem_done = stepMemWriteLine();
+            if (mem_done) {
+                BUSLOG("DRAM WRITE done owner=" << tx_.owner
+                    << " addr_line=0x" << std::hex << tx_.addr_line << std::dec);
+                if (!tx_.signaled_done) {
+                    b2m_[tx_.owner].B_DONE.store(true, std::memory_order_release);
+                    tx_.signaled_done = true;
+                }
+                req_edge_block_[tx_.owner] = true;  // exigir flanco de B_REQ
+                tx_.busy = false;
+            }
+            break;
+        }
+        default: break;
+        }
+
+        if (tx_.busy && tx_.owner >= 0)
+            b2m_[tx_.owner].B_GRANT.store(true, std::memory_order_relaxed);
+        return; // este tick fue para DRAM
+    }
+
+    // 1) Si no hay transacción activa, buscar una nueva
+    if (!tx_.busy) {
+        int owner = pickOwnerRR();
+        if (owner < 0) return; // nadie pidió
+
+        // Iniciar transacción
+        tx_.busy = true;
+        tx_.owner = owner;
+        tx_.signaled_rvalid = false;
+        tx_.signaled_done = false;
+
+        tx_.cmd = m2b_[owner].B_CMD;
+        tx_.addr_line = align_to_line(m2b_[owner].B_ADDR);
+        tx_.seen_shared = false;
+        tx_.seen_hitm = false;
+        tx_.m_owner = -1;
+        tx_.have_rdata = false;
+        tx_.inv_acks_needed = 0;
+        tx_.inv_acks_got = 0;
+        tx_.mem = ActiveTx::MemPhase::None;
+        tx_.seg = 0;
+
+        BUSLOG("NEW owner=" << owner
+            << " cmd=" << (int)tx_.cmd
+            << " addr_line=0x" << std::hex << tx_.addr_line << std::dec);
+
+        // primer GRANT inmediato
+        b2m_[owner].B_GRANT.store(true, std::memory_order_release);
+
+        // ===== Fase 1: difusión Snoop =====
+        for (int id = 0; id < (int)m2b_.size(); ++id) {
+            if (id == owner) continue;
+
+            // Copiar callback BAJO LOCK y soltar antes de invocar
+            std::function<SnoopResp(const SnoopReq&)> cb;
+            {
+                std::lock_guard<std::mutex> lk(cb_mtx_);
+                cb = (id >= 0 && id < (int)sn_cb_.size()) ? sn_cb_[id] : nullptr;
+            }
+            if (!cb) continue;
+
+            SnoopReq s;
+            s.cmd = tx_.cmd;
+            s.addr_line = tx_.addr_line;
+            s.grant_data = false;
+            s.from_self = false;
+
+            BUSLOG("SNP → L1" << id);
+            SnoopResp r = cb(s);
+            BUSLOG("SNP ← L1" << id
+                << " shared=" << r.has_shared
+                << " mod=" << r.has_mod
+                << " inv_ack=" << r.inv_ack);
+
+            tx_.seen_shared |= r.has_shared;
+            if (r.has_mod) {
+                tx_.seen_hitm = true;
+                if (tx_.m_owner < 0) tx_.m_owner = id;
+            }
+
+            if (tx_.cmd == BusCmd::BusUpgr) {
+                if (r.has_shared && !r.has_mod) tx_.inv_acks_needed++;
+                if (r.inv_ack)                  tx_.inv_acks_got++;
+            }
+        }
+
+        BUSLOG("SNP summary: shared_seen=" << tx_.seen_shared
+            << " hitm_seen=" << tx_.seen_hitm
+            << " m_owner=" << tx_.m_owner
+            << " inv_needed=" << tx_.inv_acks_needed
+            << " inv_got=" << tx_.inv_acks_got);
+
+        // Publicar flags al solicitante (efímeros)
+        b2m_[owner].B_SHARED_SEEN.store(tx_.seen_shared, std::memory_order_relaxed);
+        b2m_[owner].B_HITM_SEEN.store(tx_.seen_hitm, std::memory_order_relaxed);
+
+        // ===== Fase 2: ejecución según comando =====
+        switch (tx_.cmd) {
+
+        case BusCmd::BusRd:
+        case BusCmd::BusRdX: {
+            if (tx_.seen_hitm && tx_.m_owner >= 0) {
+                // ---- Cache-to-cache: pedir datos al dueño en M ----
+                std::function<SnoopResp(const SnoopReq&)> cb2;
+                {
+                    std::lock_guard<std::mutex> lk(cb_mtx_);
+                    cb2 = (tx_.m_owner >= 0 && tx_.m_owner < (int)sn_cb_.size())
+                        ? sn_cb_[tx_.m_owner] : nullptr;
+                }
+
+                if (cb2) {
+                    SnoopReq s2;
+                    s2.cmd = tx_.cmd;
+                    s2.addr_line = tx_.addr_line;
+                    s2.grant_data = true;
+                    s2.from_self = false;
+
+                    BUSLOG("C2C grant_data → L1" << tx_.m_owner);
+                    SnoopResp r2 = cb2(s2);
+                    BUSLOG("C2C rvalid=" << r2.rvalid);
+
+                    if (r2.rvalid) {
+                        tx_.have_rdata = true;
+                        tx_.rdata = r2.rdata;
+                        if (!tx_.signaled_rvalid) {
+                            b2m_[owner].B_RDATA = r2.rdata;
+                            b2m_[owner].B_RVALID.store(true, std::memory_order_release);
+                            tx_.signaled_rvalid = true;
+                        }
+                    }
+                }
+
+                if (!tx_.signaled_done) {
+                    b2m_[owner].B_DONE.store(true, std::memory_order_release);
+                    tx_.signaled_done = true;
+                }
+                req_edge_block_[owner] = true;  // exigir flanco de B_REQ
+                tx_.busy = false;
+                BUSLOG("CLOSE (C2C) owner=" << owner);
+                return;
+
+            }
+            else {
+                BUSLOG("DRAM READ start base_idx=0x"
+                    << std::hex << (uint32_t)idx64(tx_.addr_line) << std::dec);
+                startMemReadLine();
+                b2m_[owner].B_GRANT.store(true, std::memory_order_relaxed);
+                return;
+            }
+        }
+
+        case BusCmd::BusUpgr: {
+            BUSLOG("UPGR: inv_needed=" << tx_.inv_acks_needed
+                << " inv_got=" << tx_.inv_acks_got);
+            if (!tx_.signaled_done) {
+                b2m_[owner].B_DONE.store(true, std::memory_order_release);
+                tx_.signaled_done = true;
+            }
+            req_edge_block_[owner] = true;  // exigir flanco de B_REQ
+            tx_.busy = false;
+            BUSLOG("CLOSE (UPGR) owner=" << owner);
+            return;
+        }
+
+        case BusCmd::WriteBack: {
+            BUSLOG("DRAM WRITE start base_idx=0x"
+                << std::hex << (uint32_t)idx64(tx_.addr_line) << std::dec);
+            tx_.wb_line = m2b_[owner].B_WDATA;
+            startMemWriteLine();
+            b2m_[owner].B_GRANT.store(true, std::memory_order_relaxed);
+            return;
+        }
+        } // switch
+    }
+}
+

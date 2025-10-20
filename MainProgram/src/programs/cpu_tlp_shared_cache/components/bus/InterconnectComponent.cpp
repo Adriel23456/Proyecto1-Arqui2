@@ -1,10 +1,12 @@
+//InterconnectComponent.cpp
 #include "../include/programs/cpu_tlp_shared_cache/components/bus/InterconnectComponent.h"
 #include <chrono>
-#include <iostream>
+
 
 namespace cpu_tlp {
 
     bool InterconnectComponent::initialize(std::shared_ptr<CPUSystemSharedData> sharedData, int masters) {
+        std::cout << "Hola desde SFML" << std::endl;
         if (m_running.load()) return false;
         if (!sharedData) return false;
 

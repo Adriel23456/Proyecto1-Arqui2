@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿//SharedData.h
+#pragma once
 #include <atomic>
 #include <cstdint>
 

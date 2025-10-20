@@ -1,9 +1,11 @@
+//l1_cash.h
 #ifndef L1_CACHE_H
 #define L1_CACHE_H
 
 #include <array>
 #include <cstdint>
 #include <cstddef>
+#include <mutex>
 
 // ============================================================
 // Parámetros del MVP (como ya tenías)
@@ -88,6 +90,8 @@ class L1Cache {
 public:
   L1Cache();
 
+  mutable std::mutex mtx_;
+
   // --- Interfaz principal ---
   void reset();
   void beginAccess(const CpuReq& req);
@@ -111,6 +115,7 @@ private:
   // ---- Helpers públicos en .cpp ----
   friend AddrParts splitAddress(uint64_t addr);
   int findWay(uint32_t set, uint64_t tag) const;
+  bool pe_req_block_ = false;
 
   // ---- Estado interno ----
   std::array<CacheSet, SETS> sets_{};
@@ -122,6 +127,8 @@ private:
   MasterToBus* pm_out_{nullptr};  // L1 → Bus
   BusToMaster* pm_in_{nullptr};   // Bus → L1
   int          l1_id_{-1};
+
+  bool prev_req_{ false };  // ← nuevo
 
   // ---- Contexto de transacción pendiente (para MISS/Upgr/WB) ----
   struct PendingTx {

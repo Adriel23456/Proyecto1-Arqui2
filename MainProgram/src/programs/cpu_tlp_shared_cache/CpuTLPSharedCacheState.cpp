@@ -24,6 +24,8 @@
 #include "programs/cpu_tlp_shared_cache/components/PE3Component.h"
 #include "programs/cpu_tlp_shared_cache/views/CompilerView.h"
 #include "programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h"
+
+
 #include <imgui.h>
 #include <iostream>
 #include <memory>
@@ -43,11 +45,31 @@ CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindo
         std::cerr << "[CpuTLP] InstructionMemory init failed\n";
     }
 
+
     // 2.5) Lanzar SharedMemory (NUEVO)
     m_sharedMemoryComponent = std::make_unique<cpu_tlp::SharedMemoryComponent>();
     if (!m_sharedMemoryComponent->initialize(m_cpuSystemData)) {
         std::cerr << "[CpuTLP] SharedMemory init failed\n";
     }
+
+        // 2.7) Lanzar Interconnect (4 maestros) y cablearlo a RAM
+    m_interconnect = std::make_unique<cpu_tlp::InterconnectComponent>();
+    if (!m_interconnect->initialize(m_cpuSystemData, /*masters=*/4)) {
+        std::cerr << "[CpuTLP] Interconnect init failed\n";
+    }
+
+    // 2.8) Crear L1s y conectarlas al bus
+    m_l1c0 = std::make_unique<cpu_tlp::L1Component>(0);
+    m_l1c1 = std::make_unique<cpu_tlp::L1Component>(1);
+    m_l1c2 = std::make_unique<cpu_tlp::L1Component>(2);
+    m_l1c3 = std::make_unique<cpu_tlp::L1Component>(3);
+
+    auto* bus = m_interconnect->raw(); // Interconnect*
+    if (!m_l1c0->initialize(m_cpuSystemData, bus)) std::cerr << "[CpuTLP] L1(0) init failed\n";
+    if (!m_l1c1->initialize(m_cpuSystemData, bus)) std::cerr << "[CpuTLP] L1(1) init failed\n";
+    if (!m_l1c2->initialize(m_cpuSystemData, bus)) std::cerr << "[CpuTLP] L1(2) init failed\n";
+    if (!m_l1c3->initialize(m_cpuSystemData, bus)) std::cerr << "[CpuTLP] L1(3) init failed\n";
+
 
     // 3) Crear PE0
     m_pe0 = std::make_unique<cpu_tlp::PE0Component>(0);

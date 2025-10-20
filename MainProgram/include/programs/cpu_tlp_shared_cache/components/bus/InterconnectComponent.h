@@ -3,6 +3,7 @@
 #include <memory>
 #include <functional>
 #include <atomic>
+#include <iostream>
 #include "programs/cpu_tlp_shared_cache/components/SharedData.h"
 #include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h"
 

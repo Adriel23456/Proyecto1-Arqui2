@@ -3,6 +3,7 @@
 #include <functional>
 #include <cstdint>
 #include <atomic>
+#include <mutex>
 
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"   // BusCmd, LineData, OFFSET_BITS
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"  // SnoopReq, SnoopResp
@@ -27,9 +28,9 @@ struct BusToMaster {
     std::atomic<bool> B_GRANT{ false };        // grant del bus
     std::atomic<bool> B_SHARED_SEEN{ false };  // algún otro tiene copia
     std::atomic<bool> B_HITM_SEEN{ false };    // alguien tenía M (dirty)
-    std::atomic<bool> B_RVALID{ false };       // datos válidos
+    std::atomic<bool> B_RVALID{ false };       // datos válidos (pulso one-shot)
     LineData          B_RDATA{};               // payload (no atómico)
-    std::atomic<bool> B_DONE{ false };         // fin de transacción
+    std::atomic<bool> B_DONE{ false };         // fin de transacción (pulso one-shot)
     std::atomic<bool> B_WREADY{ true };        // listo para aceptar WDATA
 };
 
@@ -39,7 +40,10 @@ struct BusToMaster {
 class Interconnect {
 public:
     explicit Interconnect(int num_l1)
-        : m2b_(num_l1), b2m_(num_l1), rr_ptr_(0) {
+        : m2b_(num_l1), b2m_(num_l1), rr_ptr_(0),
+        req_edge_block_(num_l1, false),
+        lg_last_addr_(num_l1, 0), lg_last_cmd_(num_l1, BusCmd::BusRd), lg_same_count_(num_l1, 0)
+    {
         sn_cb_.resize(num_l1);
     }
 
@@ -49,6 +53,7 @@ public:
 
     // Callback de snoop (bus → L1.onSnoop)
     void attachSnoopCallback(int id, std::function<SnoopResp(const SnoopReq&)> cb) {
+        std::lock_guard<std::mutex> lk(cb_mtx_);
         sn_cb_[id] = std::move(cb);
     }
 
@@ -57,6 +62,10 @@ public:
 
     // Avanza un ciclo de bus
     void tick();
+
+    std::vector<uint64_t> lg_last_addr_;
+    std::vector<BusCmd>   lg_last_cmd_;
+    std::vector<int>      lg_same_count_;
 
 private:
     struct ActiveTx {
@@ -80,12 +89,17 @@ private:
         enum class MemPhase { None, ReadReq, ReadWait, WriteReq, WriteWait } mem{ MemPhase::None };
         int      seg{ 0 };     // beat 0..3 (cada beat = 8 bytes)
 
+        // One-shot flags para señales al master
+        bool     signaled_rvalid{ false };
+        bool     signaled_done{ false };
+
         void clear() { *this = ActiveTx{}; }
     };
 
     std::vector<MasterToBus>  m2b_;
     std::vector<BusToMaster>  b2m_;
     std::vector<std::function<SnoopResp(const SnoopReq&)>> sn_cb_;
+    mutable std::mutex cb_mtx_;
 
     int rr_ptr_{ 0 };
     ActiveTx tx_{};
@@ -93,11 +107,13 @@ private:
     // Backend DRAM (atomics del SharedMemory)
     cpu_tlp::RAMConnection* ram_{ nullptr };
 
+    // Ignorar B_REQ de un master hasta que baje (edge-trigger)
+    std::vector<bool> req_edge_block_;
+
     // --- Utilidades internas ---
     int  pickOwnerRR();
     void clearOutputs();
 
-    // Mapear dirección de línea (alineada) a offset EN BYTES dentro de la ventana de 4KiB (0x000–0xFFF)
     static uint16_t idx64(uint64_t addr_line);
 
     // DRAM adapters (línea de 32B en 4 beats de 64b)

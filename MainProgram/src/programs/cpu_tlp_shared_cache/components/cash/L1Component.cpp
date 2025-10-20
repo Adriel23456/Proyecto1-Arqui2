@@ -1,3 +1,4 @@
+//L1_Component.cpp
 #include "../include/programs/cpu_tlp_shared_cache/components/cash/L1Component.h"
 
 #include <chrono>
@@ -6,7 +7,9 @@ namespace cpu_tlp {
 
     bool L1Component::initialize(std::shared_ptr<CPUSystemSharedData> sharedData,
         Interconnect* ic)
+
     {
+
         if (m_running.load()) return false;
         if (!sharedData || !ic) return false;
 
