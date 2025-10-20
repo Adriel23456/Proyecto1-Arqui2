@@ -9,17 +9,12 @@
   },
   "ExpandedNodes": [
     "",
-    "\\include",
-    "\\include\\programs",
     "\\include\\programs\\cpu_tlp_shared_cache",
     "\\include\\programs\\cpu_tlp_shared_cache\\components",
-    "\\include\\programs\\cpu_tlp_shared_cache\\components\\cash",
-    "\\src",
-    "\\src\\programs",
+    "\\resources\\Assets\\CPU_TLP\\EjemploDeRAM",
     "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components\\cash"
+    "\\src\\programs\\cpu_tlp_shared_cache\\components"
   ],
-  "SelectedNode": "\\include\\programs\\cpu_tlp_shared_cache\\components\\SharedMemoryComponent.h",
+  "SelectedNode": "\\resources",
   "PreviewInSolutionExplorer": false
 }

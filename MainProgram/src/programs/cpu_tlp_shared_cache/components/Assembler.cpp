@@ -73,18 +73,30 @@ bool Assembler::isImmediate(const std::string& t) {
 
 /**
  * Parsea un inmediato entero (elimina el '#' y convierte)
+ * Soporta tanto decimal (#123, #-45) como hexadecimal (#0x800, #0xFF)
  */
 long Assembler::parseIntImm(const std::string& t) {
     try {
-        if (t.size() > 1) {
-            return std::stol(t.substr(1));
+        if (t.size() <= 1) {
+            throw std::runtime_error("Inmediato vacio: " + t);
+        }
+
+        std::string num_str = t.substr(1); // Eliminar el '#'
+
+        // Detectar si es hexadecimal (comienza con 0x o 0X)
+        if (num_str.size() >= 2 &&
+            num_str[0] == '0' &&
+            (num_str[1] == 'x' || num_str[1] == 'X')) {
+            // Hexadecimal: usar base 16
+            return std::stol(num_str, nullptr, 16);
         }
         else {
-            throw std::runtime_error("Inmediato vacío: " + t);
+            // Decimal: usar base 10 (soporta negativos)
+            return std::stol(num_str, nullptr, 10);
         }
     }
     catch (const std::exception& e) {
-        throw std::runtime_error("Inmediato entero inválido: " + t + " (" + e.what() + ")");
+        throw std::runtime_error("Inmediato entero invalido: " + t + " (" + e.what() + ")");
     }
 }
 
@@ -142,6 +154,9 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
         // MOV y variantes
         {"MOV", 0x31}, {"MVN", 0x32}, {"MOVI", 0x33}, {"MVNI", 0x34},
         {"FMOVI", 0x35}, {"FMVNI", 0x36},
+
+        // MOVL - Carga dirección de etiqueta (usa mismo opcode que MOVI)
+        {"MOVL", 0x33},
 
         // Comparaciones enteras (sin inmediato)
         {"CMP", 0x37}, {"CMN", 0x38}, {"TST", 0x39}, {"TEQ", 0x3A},
@@ -283,7 +298,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                 size_t bracket_close = rest.find(']');
 
                 if (bracket_open == std::string::npos || bracket_close == std::string::npos) {
-                    throw std::runtime_error("Instrucción de memoria requiere: REG, [BASE] o REG, [BASE, #offset]");
+                    throw std::runtime_error("Instruccion de memoria requiere: REG, [BASE] o REG, [BASE, #offset]");
                 }
 
                 // Extraer primer registro (antes del '[')
@@ -296,7 +311,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                 std::string reg_str_upper = up(reg_str);
 
                 if (REGS.count(reg_str_upper) == 0) {
-                    throw std::runtime_error("Registro inválido: " + reg_str);
+                    throw std::runtime_error("Registro invalido: " + reg_str);
                 }
                 uint8_t reg = REGS.at(reg_str_upper);
 
@@ -315,7 +330,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
 
                     std::string base_str_upper = up(base_str);
                     if (REGS.count(base_str_upper) == 0) {
-                        throw std::runtime_error("Registro base inválido: " + base_str);
+                        throw std::runtime_error("Registro base invalido: " + base_str);
                     }
                     base_reg = REGS.at(base_str_upper);
 
@@ -329,7 +344,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                     // Formato: [BASE] (sin offset)
                     std::string base_str_upper = up(inside_brackets);
                     if (REGS.count(base_str_upper) == 0) {
-                        throw std::runtime_error("Registro base inválido: " + inside_brackets);
+                        throw std::runtime_error("Registro base invalido: " + inside_brackets);
                     }
                     base_reg = REGS.at(base_str_upper);
                     offset_u32 = 0;
@@ -357,14 +372,45 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                 auto ops = splitOperands(rest);
 
                 // ───────────────────────────────────────────────────────────
+                // MOVL: Carga dirección absoluta de etiqueta (PRIORIDAD)
+                // ───────────────────────────────────────────────────────────
+                // Formato: MOVL REG, .LABEL
+                // DEBE IR ANTES de la verificación genérica de 2 operandos
+                // Carga el PC (en bytes) de la etiqueta en el registro
+
+                if (ops.size() == 2 && !isImmediate(ops[1]) && opcU == "MOVL") {
+                    std::string rd_s = up(ops[0]);
+                    if (REGS.count(rd_s) == 0) {
+                        throw std::runtime_error("Registro destino invalido para MOVL: " + ops[0]);
+                    }
+
+                    std::string target = up(ops[1]);
+                    if (labels.count(target) == 0) {
+                        throw std::runtime_error("Etiqueta no encontrada para MOVL: '" + ops[1] + "'");
+                    }
+
+                    uint8_t rd = REGS.at(rd_s);
+
+                    // El inmediato es el PC absoluto de la etiqueta EN BYTES
+                    long target_pc_instructions = labels.at(target);
+                    long target_address_bytes = target_pc_instructions * 8;  // Convertir a bytes
+                    uint32_t imm_u32 = static_cast<uint32_t>(static_cast<int32_t>(target_address_bytes));
+
+                    word |= (u64(rd) & 0xFULL) << 52;                    // Rd
+                    word |= (u64(rd) & 0xFULL) << 48;                    // Rn (mismo que Rd)
+                    word |= (u64(imm_u32) & 0xFFFFFFFFULL) << 12;        // Inmediato (dirección)
+                    encoded = true;
+                }
+
+                // ───────────────────────────────────────────────────────────
                 // FORMATO R: 3 Operandos de Registro (Rd, Rn, Rm)
                 // ───────────────────────────────────────────────────────────
                 // Ejemplo: ADD REG1, REG2, REG3
 
-                if (ops.size() == 3 && !isImmediate(ops[2])) {
+                else if (ops.size() == 3 && !isImmediate(ops[2])) {
                     std::string rd = up(ops[0]), rn = up(ops[1]), rm = up(ops[2]);
                     if (REGS.count(rd) == 0 || REGS.count(rn) == 0 || REGS.count(rm) == 0)
-                        throw std::runtime_error("Registro inválido en instrucción de 3 operandos.");
+                        throw std::runtime_error("Registro invalido en instruccion de 3 operandos.");
 
                     word |= (u64(REGS.at(rd)) & 0xFULL) << 52;  // Rd [55:52]
                     word |= (u64(REGS.at(rn)) & 0xFULL) << 48;  // Rn [51:48]
@@ -382,7 +428,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                 else if (ops.size() == 2 && !isImmediate(ops[1])) {
                     std::string arg0 = up(ops[0]), arg1 = up(ops[1]);
                     if (REGS.count(arg0) == 0 || REGS.count(arg1) == 0)
-                        throw std::runtime_error("Registro inválido en instrucción de 2 operandos.");
+                        throw std::runtime_error("Registro invalido en instruccion de 2 operandos.");
 
                     // Instrucciones de comparación: primer operando → Rn, segundo → Rm
                     if (opcval == 0x37 || opcval == 0x38 || opcval == 0x39 || opcval == 0x3A ||
@@ -406,11 +452,11 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
 
                 else if (!ops.empty() && isImmediate(ops.back())) {
                     if (ops.size() < 2 || ops.size() > 3)
-                        throw std::runtime_error("Instrucción con inmediato requiere 2 o 3 operandos.");
+                        throw std::runtime_error("Instruccion con inmediato requiere 2 o 3 operandos.");
 
                     std::string rd_s = up(ops[0]);
                     if (REGS.count(rd_s) == 0)
-                        throw std::runtime_error("Registro destino inválido: " + ops[0]);
+                        throw std::runtime_error("Registro destino invalido: " + ops[0]);
 
                     uint8_t rd = REGS.at(rd_s);
                     uint8_t rn = rd;  // Por defecto, Rn = Rd
@@ -421,7 +467,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                         if (isImmediate(rn_s))
                             throw std::runtime_error("Segundo operando no puede ser inmediato.");
                         if (REGS.count(rn_s) == 0)
-                            throw std::runtime_error("Registro fuente inválido: " + ops[1]);
+                            throw std::runtime_error("Registro fuente invalido: " + ops[1]);
                         rn = REGS.at(rn_s);
                     }
 
@@ -436,6 +482,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                     }
                     else {
                         // Entero: mantener representación de complemento a 2
+                        // Ahora soporta hexadecimal (#0x800) y decimal (#123, #-45)
                         long val = parseIntImm(immtok);
                         imm_u32 = static_cast<uint32_t>(static_cast<int32_t>(val));
                     }
@@ -477,7 +524,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                     (opcval == 0x1C || opcval == 0x1D)) {
                     std::string rd_s = up(ops[0]);
                     if (REGS.count(rd_s) == 0) {
-                        throw std::runtime_error("Registro inválido para INC/DEC: " + ops[0]);
+                        throw std::runtime_error("Registro invalido para INC/DEC: " + ops[0]);
                     }
 
                     uint8_t rd = REGS.at(rd_s);
@@ -502,7 +549,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
                 // ───────────────────────────────────────────────────────────
 
                 if (!encoded) {
-                    throw std::runtime_error("Formato de instrucción no válido o número de operandos incorrecto.");
+                    throw std::runtime_error("Formato de instruccion no valido o numero de operandos incorrecto.");
                 }
             }
 
@@ -513,7 +560,7 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
         catch (const std::exception& e) {
             // Acumular errores para reportar al final
             std::stringstream error_ss;
-            error_ss << "[Línea " << lineNumber << "] " << e.what() << " → \"" << text << "\"";
+            error_ss << "[Linea " << lineNumber << "] " << e.what() << " -> \"" << text << "\"";
             errors.push_back(error_ss.str());
         }
     }
@@ -524,14 +571,14 @@ std::vector<Assembler::u64> Assembler::assembleFile(const std::string& path) {
 
     if (!errors.empty()) {
         std::stringstream final_error;
-        final_error << "El ensamblado falló con " << errors.size() << " error(es):\n";
+        final_error << "El ensamblado fallo con " << errors.size() << " error(es):\n";
         for (const auto& err : errors) {
-            final_error << "  • " << err << "\n";
+            final_error << "  * " << err << "\n";
         }
         throw std::runtime_error(final_error.str());
     }
 
-    std::cout << "[Assembler] ✓ Ensamblado completado exitosamente: "
+    std::cout << "[Assembler] OK Ensamblado completado exitosamente: "
         << out.size() << " instrucciones generadas.\n";
 
     return out;
