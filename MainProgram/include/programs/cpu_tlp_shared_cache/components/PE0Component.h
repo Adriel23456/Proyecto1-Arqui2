@@ -88,6 +88,18 @@ namespace cpu_tlp {
             uint64_t Instr_M = 0x4D00000000000000ULL; // NOP
         };
 
+        struct LSUState {
+            bool     inflight = false;      // hay un acceso en vuelo
+            uint64_t addr = 0;          // dirección latcheada
+            uint64_t wdata = 0;          // datos para STR
+            uint8_t  size = 8;          // 8 bytes para LDR64/STR64
+            bool     is_store = false;      // true si STR
+            bool     is_byte = false;      // true si ISB (byte)
+        };
+        LSUState m_lsu;
+        bool m_ack_pulse = false;           // para dejar C_READY_ACK alto 1 ciclo
+
+
         // ============ UNIDADES FUNCIONALES ============
 
         class RegisterFile {

@@ -15,7 +15,6 @@
     "\\include\\programs\\cpu_tlp_shared_cache\\components",
     "\\include\\programs\\cpu_tlp_shared_cache\\components\\cash",
     "\\resources",
-    "\\resources\\Assets\\CPU_TLP",
     "\\src",
     "\\src\\programs",
     "\\src\\programs\\cpu_tlp_shared_cache",
