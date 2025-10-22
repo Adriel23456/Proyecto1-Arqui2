@@ -61,8 +61,17 @@ void L1Cache::beginAccess(const CpuReq& req) {
     std::lock_guard<std::mutex> lk(mtx_);
     in_ = req;
 
+    // ====================================================================
+    // CRITICAL FIX: Bajar B_REQ AQUÍ cuando recibimos ACK
+    // ====================================================================
     if (fsm_ == L1State::WAIT_ACK && in_.C_READY_ACK) {
         out_.C_READY = false;
+
+        // Bajar B_REQ antes de cambiar a IDLE
+        if (pm_out_) {
+            pm_out_->B_REQ.store(false, std::memory_order_release);
+        }
+
         fsm_ = L1State::IDLE;
     }
 
@@ -286,7 +295,7 @@ void L1Cache::tick() {
             out_.C_READY = true;
             if (pm_out_) {
                 pm_out_->B_WVALID.store(false, memory_order_release);
-                pm_out_->B_REQ.store(false, memory_order_release);
+                // NO bajar B_REQ aquí - se baja en beginAccess al recibir ACK
             }
             fsm_ = L1State::WAIT_ACK;
             break;
@@ -319,17 +328,15 @@ void L1Cache::tick() {
 
         if (pm_out_) {
             pm_out_->B_WVALID.store(false, memory_order_release);
-            pm_out_->B_REQ.store(false, memory_order_release);
+            // NO bajar B_REQ aquí - se baja en beginAccess al recibir ACK
         }
 
         fsm_ = L1State::WAIT_ACK;
     } break;
 
     case L1State::WAIT_ACK: {
-        if (in_.C_READY_ACK) {
-            out_.C_READY = false;
-            fsm_ = L1State::IDLE;
-        }
+        // Este estado ahora solo se maneja en beginAccess
+        // No hacemos nada aquí, esperamos el ACK del CPU
     } break;
 
     default: break;

@@ -39,7 +39,7 @@ struct BusToMaster;
 // Estructuras básicas de la caché
 // ============================================================
 struct CacheLine {
-    uint64_t  tag = INVALID_TAG_SENTINEL; // <<< antes estaba en 0
+    uint64_t  tag = INVALID_TAG_SENTINEL;
     Mesi      state = Mesi::I;
     LineData  data{};
     bool      valid = false;
@@ -140,7 +140,7 @@ public:
 private:
     friend AddrParts splitAddress(uint64_t addr);
     int  findWay(uint32_t set, uint64_t tag) const;
-    void logSignals_(); // NUEVO: logging “on-change” por instancia
+    void logSignals_();
 
     bool pe_req_block_ = false;
 
@@ -178,6 +178,16 @@ private:
         // Congelamos offsets del acceso que provocó el miss
         uint8_t  byte_in_line{ 0 };
         uint8_t  dw_in_line{ 0 };
+
+        // ====================================================================
+        // CRITICAL FIX: Track si esta transacción está activa
+        // ====================================================================
+        // Esto permite que onSnoop responda correctamente incluso cuando
+        // la línea todavía no es válida (en estados WAIT_DATA/FILL)
+        bool     is_active{ false };
+
+        // Estado que tendrá la línea cuando complete (para responder snoops)
+        Mesi     target_state{ Mesi::I };
     } pend_;
 
     LineData temp_fill_{};

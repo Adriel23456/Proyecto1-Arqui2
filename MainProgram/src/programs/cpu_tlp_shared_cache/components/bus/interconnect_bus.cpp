@@ -226,6 +226,9 @@ void Interconnect::tick() {
         return;
     }
 
+    // ====================================================================
+    // CRITICAL FIX: ESPERAR A QUE B_REQ BAJE ANTES DE LIBERAR TRANSACCIÓN
+    // ====================================================================
     // 0.5) HOLD-UNTIL-CONSUMED
     if (tx_.busy && tx_.owner >= 0 && tx_.mem == ActiveTx::MemPhase::None) {
         bool need_hold = false;
@@ -235,13 +238,32 @@ void Interconnect::tick() {
         case BusCmd::BusRdX: {
             bool rv = b2m_[tx_.owner].B_RVALID.load(std::memory_order_acquire);
             bool dn = b2m_[tx_.owner].B_DONE.load(std::memory_order_acquire);
-            need_hold = (rv || dn);
+
+            if (rv || dn) {
+                need_hold = true;
+                break;
+            }
+
+            // CRITICAL: También verificar que B_REQ haya bajado
+            // Esto garantiza que la caché completó FILL y actualizó su estado
+            bool req = m2b_[tx_.owner].B_REQ.load(std::memory_order_acquire);
+            if (req) {
+                need_hold = true;
+            }
             break;
         }
         case BusCmd::WriteBack:
         case BusCmd::BusUpgr: {
             bool dn = b2m_[tx_.owner].B_DONE.load(std::memory_order_acquire);
-            need_hold = dn;
+            if (dn) {
+                need_hold = true;
+                break;
+            }
+
+            bool req = m2b_[tx_.owner].B_REQ.load(std::memory_order_acquire);
+            if (req) {
+                need_hold = true;
+            }
             break;
         }
         default: break;
@@ -252,9 +274,6 @@ void Interconnect::tick() {
             return;
         }
         else {
-            // CRÍTICO: NO bloquear con req_edge_block_ después de WriteBack
-            // El WriteBack siempre va seguido de un nuevo request (BusRd/BusRdX)
-            // como parte del mismo reemplazo. Bloquear aquí causa deadlock.
             if (tx_.cmd != BusCmd::WriteBack) {
                 req_edge_block_[tx_.owner] = true;
             }
