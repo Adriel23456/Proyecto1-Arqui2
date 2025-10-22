@@ -91,6 +91,7 @@ START:
 ; ================================================================
 .COMPUTE_PE0:
     LDR REG5, [REG1]           ; REG5 = A[i]
+    NOP
     LDR REG6, [REG2]           ; REG6 = B[i]
     FMUL REG5, REG5, REG6      ; REG5 = A[i] * B[i]
     FADD REG4, REG4, REG5      ; acum += A[i] * B[i]
@@ -113,6 +114,7 @@ START:
 ; ================================================================
 .COMPUTE_PE1:
     LDR REG5, [REG1]
+    NOP
     LDR REG6, [REG2]
     FMUL REG5, REG5, REG6
     FADD REG4, REG4, REG5
@@ -135,6 +137,7 @@ START:
 ; ================================================================
 .COMPUTE_PE2:
     LDR REG5, [REG1]
+    NOP
     LDR REG6, [REG2]
     FMUL REG5, REG5, REG6
     FADD REG4, REG4, REG5
@@ -157,6 +160,7 @@ START:
 ; ================================================================
 .COMPUTE_PE3:
     LDR REG5, [REG1]
+    NOP
     LDR REG6, [REG2]
     FMUL REG5, REG5, REG6
     FADD REG4, REG4, REG5
