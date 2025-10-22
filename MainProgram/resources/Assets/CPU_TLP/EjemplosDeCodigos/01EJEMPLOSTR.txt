@@ -1,0 +1,47 @@
+START:    
+    ; Dispatch a codigo especifico segun PEID
+    CMPI SIDS, #0
+    BEQ .SETUP_PE0
+    CMPI SIDS, #1
+    BEQ .SETUP_PE1
+    CMPI SIDS, #2
+    BEQ .SETUP_PE2
+    CMPI SIDS, #3
+    BEQ .SETUP_PE3
+    SWI                         ; PEID invalido - terminar
+
+.SETUP_PE0:
+    FMOVI REG1, #16.0          ; REG1 = 16.0
+    MOVI REG2, #16             ; REG2 = 16 (dirección base)
+    STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
+    NOP
+    NOP
+    NOP
+    SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[16]=16.0
+
+.SETUP_PE1:
+    FMOVI REG1, #16.0          ; REG1 = 16.0
+    MOVI REG2, #16             ; REG2 = 16 (dirección base)
+    STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
+    NOP
+    NOP
+    NOP
+    SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[16]=16.0
+
+.SETUP_PE2:
+    FMOVI REG1, #16.0          ; REG1 = 16.0
+    MOVI REG2, #16             ; REG2 = 16 (dirección base)
+    STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
+    NOP
+    NOP
+    NOP
+    SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[16]=16.0
+
+.SETUP_PE3:
+    FMOVI REG1, #16.0          ; REG1 = 16.0
+    MOVI REG2, #16             ; REG2 = 16 (dirección base)
+    STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
+    NOP
+    NOP
+    NOP
+    SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[16]=16.0

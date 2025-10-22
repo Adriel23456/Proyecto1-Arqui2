@@ -3,40 +3,16 @@
   "WorkspaceRootPath": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\EJEMPLOLDR.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\EJEMPLOLDR.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\CODIGOPRINCIPAL.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\CODIGOPRINCIPAL.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\Ejemplo23.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\Ejemplo23.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
     }
   ],
   "DocumentGroupContainers": [
@@ -46,7 +22,7 @@
       "DocumentGroups": [
         {
           "DockedHeight": 312,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -58,119 +34,41 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "CpuTLPSharedCacheState.h",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h",
-              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h",
-              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\CpuTLPSharedCacheState.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAASAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-22T00:47:18.637Z",
+              "DocumentIndex": 1,
+              "Title": "CODIGOPRINCIPAL.txt",
+              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\CODIGOPRINCIPAL.txt",
+              "RelativeDocumentMoniker": "resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\CODIGOPRINCIPAL.txt",
+              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\CODIGOPRINCIPAL.txt",
+              "RelativeToolTip": "resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\CODIGOPRINCIPAL.txt",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAACIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
+              "WhenOpened": "2025-10-22T01:45:19.443Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "PE3Component.h",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.h",
-              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.h",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.h",
-              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAQAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-22T00:46:42.808Z",
+              "Title": "Ejemplo23.txt",
+              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\Ejemplo23.txt",
+              "RelativeDocumentMoniker": "resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\Ejemplo23.txt",
+              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\Ejemplo23.txt",
+              "RelativeToolTip": "resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\Ejemplo23.txt",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAABEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
+              "WhenOpened": "2025-10-22T01:45:14.661Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "PE2Component.h",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.h",
-              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.h",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.h",
-              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-22T00:46:37.229Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "PE1Component.h",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.h",
-              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.h",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.h",
-              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-22T00:46:32.333Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "PE0Component.h",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.h",
-              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.h",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.h",
-              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAYAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-22T00:46:29.472Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "PE3Component.cpp",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.cpp",
-              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.cpp",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.cpp",
-              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAQAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-22T00:45:30.33Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "PE2Component.cpp",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.cpp",
-              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.cpp",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.cpp",
-              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\PE2Component.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAATAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-22T00:44:52.242Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "PE1Component.cpp",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.cpp",
-              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.cpp",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.cpp",
-              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\PE1Component.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAASAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-22T00:44:46.958Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "PE0Component.cpp",
-              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.cpp",
-              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.cpp",
-              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.cpp",
-              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\PE0Component.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAARAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-22T00:44:37.59Z",
+              "DocumentIndex": 0,
+              "Title": "EJEMPLOLDR.txt",
+              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\EJEMPLOLDR.txt",
+              "RelativeDocumentMoniker": "resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\EJEMPLOLDR.txt",
+              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\EJEMPLOLDR.txt",
+              "RelativeToolTip": "resources\\Assets\\CPU_TLP\\EjemplosDeCodigos\\EJEMPLOLDR.txt",
+              "ViewState": "AgIAAB4AAAAAAAAAAAAAACoAAABCAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
+              "WhenOpened": "2025-10-22T01:45:11.655Z",
               "EditorCaption": ""
             }
           ]

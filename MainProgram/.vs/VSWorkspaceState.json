@@ -9,7 +9,11 @@
   },
   "ExpandedNodes": [
     "",
-    "\\out\\build"
+    "\\include\\programs",
+    "\\include\\programs\\cpu_tlp_shared_cache",
+    "\\include\\programs\\cpu_tlp_shared_cache\\components",
+    "\\src\\programs\\cpu_tlp_shared_cache\\components\\cash"
   ],
+  "SelectedNode": "\\resources",
   "PreviewInSolutionExplorer": false
 }

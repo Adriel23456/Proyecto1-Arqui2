@@ -679,7 +679,6 @@ namespace cpu_tlp {
         // 1. SegmentationFault
         if (SegmentationFault) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
-            out.C_READY_ACK = false; // <-- Asegurar en retorno temprano
             return out;
         }
 
@@ -687,19 +686,62 @@ namespace cpu_tlp {
         if (!INS_READY) {
             out.StallF = true;
             out.StallD = true;
-            out.C_READY_ACK = false; // <-- Asegurar en retorno temprano
             return out;
         }
 
-        // 3. CacheLatency: el handshake se hace en el LSU (stageMemory)
-// Aquí SOLO decidimos si hay que frenar el pipeline.
-        bool memoryStall = (C_REQUEST_M && !C_READY);
-        out.C_READY_ACK = false;   // el ACK lo maneja el LSU
+        // 3. CacheLatency con Handshake Completo
+        bool memoryStall = false;
+
+        if (C_REQUEST_M) {
+            // Hay una operación de memoria activa
+            if (!inMemoryOperation) {
+                // ===== INICIO DE NUEVA OPERACIÓN =====
+                inMemoryOperation = true;
+                ackSent = false;
+            }
+
+            // Máquina de estados del handshake
+            if (!ackSent) {
+                // --- FASE 1: Esperando que cache complete (C_READY=1) ---
+                if (C_READY) {
+                    // Cache completó la operación, enviar ACK
+                    ackSent = true;
+                    out.C_READY_ACK = true;
+                    memoryStall = true;  // Seguir en stall
+                }
+                else {
+                    // Todavía esperando que cache procese
+                    memoryStall = true;
+                }
+            }
+            else {
+                // --- FASE 2: ACK enviado, esperando que cache baje C_READY ---
+                if (C_READY) {
+                    // Cache todavía no reconoce el ACK
+                    out.C_READY_ACK = true;  // Mantener ACK activo
+                    memoryStall = true;      // Seguir en stall
+                }
+                else {
+                    // ===== HANDSHAKE COMPLETO =====
+                    // Cache bajó C_READY, reconoció el ACK
+                    out.C_READY_ACK = false;     // Limpiar ACK
+                    inMemoryOperation = false;   // Marcar operación como completa
+                    ackSent = false;             // Reset estado
+                    memoryStall = false;         // ¡PERMITIR AVANZAR!
+                }
+            }
+        }
+        else {
+            // No hay operación de memoria activa
+            inMemoryOperation = false;
+            ackSent = false;
+            out.C_READY_ACK = false;
+        }
+
         if (memoryStall) {
             out.StallF = out.StallD = out.StallE = out.StallM = out.StallW = true;
             return out;
         }
-
 
         // 4. RAW
         bool rawHazard = false;
@@ -861,7 +903,7 @@ namespace cpu_tlp {
             }
             };
 
-        // AGREGAR: Sincronización inicial del snapshot completo
+        // ← AGREGAR: Sincronización inicial del snapshot completo
         for (int i = 0; i < 12; ++i) {
             uint64_t val = m_registerFile.read(i);
             m_sharedData->pe_registers[m_pe_id].registers[i].store(val, std::memory_order_release);
@@ -928,10 +970,6 @@ namespace cpu_tlp {
         PC_in = 0x0;
         SegmentationFault = false;
         m_segmentationFault = false;
-
-        m_lsu = LSUState{};
-        m_ack_pulse = false;
-
 
         // Reset register file
         m_registerFile.reset();
@@ -1020,62 +1058,6 @@ namespace cpu_tlp {
         ctrl.should_stop.store(true, std::memory_order_release);
     }
 
-    bool PE1Component::pipelineEmpty() const {
-        // NOP_INSTRUCTION es tu burbuja
-        const bool stages_empty =
-            IF_ID.Instr_F == NOP_INSTRUCTION &&
-            ID_EX.Instr_D == NOP_INSTRUCTION &&
-            EX_MEM.Instr_E == NOP_INSTRUCTION &&
-            MEM_WB.Instr_M == NOP_INSTRUCTION;
-
-        // Sin operación de memoria activa en el latch EX/MEM
-        const bool no_mem_req = !EX_MEM.C_REQUEST_E;
-
-        // La L1 no está aguardando ACK (C_READY == 0)
-        const bool l1_not_waiting =
-            !m_sharedData->cache_connections[m_pe_id].C_READY.load(std::memory_order_acquire);
-
-        return stages_empty && no_mem_req && l1_not_waiting;
-    }
-
-    void PE1Component::drainAndStop() {
-        auto& ctrl = m_sharedData->pe_control[m_pe_id];
-        auto& c = m_sharedData->cache_connections[m_pe_id];
-
-        // 1) Ejecutar ciclos hasta que pipeline y handshake se liberen
-        //    (el HazardUnit enviará C_READY_ACK mientras C_READY siga alto)
-        int safety = 20000; // guarda por si algo quedó mal cableado
-        while (!pipelineEmpty() && safety-- > 0 &&
-            !m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
-            executeCycle();
-            // pequeño respiro para no acaparar CPU
-            std::this_thread::sleep_for(std::chrono::microseconds(50));
-        }
-
-        // 2) Fuerza de seguridad: si por algún motivo C_READY sigue alto,
-        //    emite ACK por unos ciclos para desbloquear a la L1.
-        if (c.C_READY.load(std::memory_order_acquire)) {
-            for (int i = 0; i < 8; ++i) {
-                c.C_READY_ACK.store(true, std::memory_order_release);
-                std::this_thread::sleep_for(std::chrono::microseconds(50));
-                // la L1 bajará C_READY al ver el ACK
-                if (!c.C_READY.load(std::memory_order_acquire)) break;
-            }
-            c.C_READY_ACK.store(false, std::memory_order_release);
-        }
-
-        // 3) Bajar líneas hacia la L1 para dejar todo en estado conocido
-        c.C_REQUEST_M.store(false, std::memory_order_release);
-        c.C_WE_M.store(false, std::memory_order_release);
-        c.C_ISB_M.store(false, std::memory_order_release);
-
-        // 4) Detener formalmente el hilo del PE
-        ctrl.command.store(0, std::memory_order_release);
-        ctrl.running.store(false, std::memory_order_release);
-        ctrl.should_stop.store(false, std::memory_order_release);
-        m_haltRequested.store(false, std::memory_order_release);
-    }
-
     // ============================================================================
     // THREAD MAIN - AGREGAR PRINTS
     // ============================================================================
@@ -1090,27 +1072,10 @@ namespace cpu_tlp {
             int cmd = ctrl.command.load(std::memory_order_acquire);
 
             switch (cmd) {
-            case 0: {// idle
+            case 0: // idle
                 ctrl.running.store(false, std::memory_order_release);
-
-                auto& c = m_sharedData->cache_connections[m_pe_id];
-
-                // Si L1 quedó con C_READY=1, enviar ACK corto para soltarla
-                if (c.C_READY.load(std::memory_order_acquire) &&
-                    !c.C_READY_ACK.load(std::memory_order_acquire)) {
-                    c.C_READY_ACK.store(true, std::memory_order_release);
-                    std::this_thread::sleep_for(std::chrono::microseconds(50));
-                    c.C_READY_ACK.store(false, std::memory_order_release);
-                }
-
-                // Dejar las líneas del lado del PE en cero (estado conocido)
-                c.C_REQUEST_M.store(false, std::memory_order_release);
-                c.C_WE_M.store(false, std::memory_order_release);
-                c.C_ISB_M.store(false, std::memory_order_release);
-
                 std::this_thread::sleep_for(1ms);
                 break;
-            }
 
             case 1: // step
                 executeCycle();
@@ -1182,9 +1147,9 @@ namespace cpu_tlp {
 
         updateInstructionTracking();
 
-        // PUBLICAR el ACK del handshake a SharedMemory
+        // ← NUEVO: Escribir C_READY_ACK a la conexión compartida
         auto& cacheConn = m_sharedData->cache_connections[m_pe_id];
-
+        cacheConn.C_READY_ACK.store(m_hazards.C_READY_ACK, std::memory_order_release);
 
         // Actualizar flipflops
         if (!m_hazards.StallW) {
@@ -1230,6 +1195,7 @@ namespace cpu_tlp {
             }
         }
         instConn.PC_F.store(PC_F, std::memory_order_release);
+
 
         std::this_thread::sleep_for(std::chrono::microseconds(500));
     }
@@ -1326,7 +1292,7 @@ namespace cpu_tlp {
         bool ins_ready = instConn.INS_READY.load(std::memory_order_acquire);
 
         auto& cacheConn = m_sharedData->cache_connections[m_pe_id];
-        bool c_request = (m_lsu.inflight || EX_MEM.C_REQUEST_E);
+        bool c_request = EX_MEM.C_REQUEST_E;
         bool c_ready = cacheConn.C_READY.load(std::memory_order_acquire);
 
         m_hazards = m_hazardUnit.detect(
@@ -1410,82 +1376,32 @@ namespace cpu_tlp {
     // ============================================================================
 
     void PE1Component::stageMemory() {
+        // Leer del flipflop EX/MEM
+        uint64_t aluOut = EX_MEM.ALUResult_E;
+        uint64_t rdRm = EX_MEM.RD_Rm_Special_E;
+
+        // Escribir señales a la cache (compartidas)
         auto& cacheConn = m_sharedData->cache_connections[m_pe_id];
+        cacheConn.ALUOut_M.store(aluOut, std::memory_order_release);
+        cacheConn.RD_Rm_Special_M.store(rdRm, std::memory_order_release);
+        cacheConn.C_WE_M.store(EX_MEM.C_WE_E, std::memory_order_release);
+        cacheConn.C_ISB_M.store(EX_MEM.C_ISB_E, std::memory_order_release);
+        cacheConn.C_REQUEST_M.store(EX_MEM.C_REQUEST_E, std::memory_order_release);
 
-        // 0) Bajar ACK si venimos del ciclo anterior (pulso de 1 ciclo)
-        if (m_ack_pulse) {
-            cacheConn.C_READY_ACK.store(false, std::memory_order_release);
-            m_ack_pulse = false;
-        }
+        // Leer respuesta de la cache
+        uint64_t rdCout = cacheConn.RD_C_out.load(std::memory_order_acquire);
 
-        // 1) Latch de nueva operación de memoria (flanco)
-        if (EX_MEM.MemOp_E && !m_lsu.inflight) {
-            m_lsu.inflight = true;
-            m_lsu.addr = EX_MEM.ALUResult_E;
-            m_lsu.is_store = EX_MEM.C_WE_E;
-            m_lsu.is_byte = EX_MEM.C_ISB_E;
-            m_lsu.size = m_lsu.is_byte ? 1 : 8;
-            m_lsu.wdata = EX_MEM.RD_Rm_Special_E;
+        // Mux de memoria
+        ALUOutM_O = EX_MEM.MemOp_E ? rdCout : aluOut;
 
-            std::cout << "[PE" << m_pe_id << "] "
-                << (m_lsu.is_store ? "STR" : "LDR")
-                << (m_lsu.is_byte ? "B" : "64")
-                << " REQ addr=0x" << std::hex << m_lsu.addr;
-            if (m_lsu.is_store) std::cout << " data=0x" << m_lsu.wdata;
-            std::cout << std::dec << "\n";
-        }
-
-        // 2) Conducir SIEMPRE el puerto mientras haya inflight
-        if (m_lsu.inflight) {
-            cacheConn.ALUOut_M.store(m_lsu.addr, std::memory_order_release);
-            cacheConn.RD_Rm_Special_M.store(m_lsu.wdata, std::memory_order_release);
-            cacheConn.C_WE_M.store(m_lsu.is_store, std::memory_order_release);
-            cacheConn.C_ISB_M.store(m_lsu.is_byte, std::memory_order_release);
-        }
-        else {
-            cacheConn.C_WE_M.store(false, std::memory_order_release);
-            cacheConn.C_ISB_M.store(false, std::memory_order_release);
-        }
-
-        // REQUEST pegajoso = hay operación en vuelo
-        cacheConn.C_REQUEST_M.store(m_lsu.inflight, std::memory_order_release);
-
-        // 4) Valores por defecto hacia WB (si NO hay load completado, queda esto)
-        MEM_WB_next.ALUOutM_O = EX_MEM.ALUResult_E;
+        // Preparar next flipflop
         MEM_WB_next.RegWrite_M = EX_MEM.RegWrite_E;
         MEM_WB_next.PCSrc_M = EX_MEM.PCSrc_AND;
+        MEM_WB_next.ALUOutM_O = ALUOutM_O;
         MEM_WB_next.Rd_in_M = EX_MEM.Rd_in_E;
+
         MEM_WB_next.Instr_M = EX_MEM.Instr_E;
-
-        // 3) Compleción: cuando L1 da READY, tomar dato/confirmar y pulso ACK
-        const bool ready = cacheConn.C_READY.load(std::memory_order_acquire);
-        if (m_lsu.inflight && ready) {
-            if (!m_lsu.is_store) {
-                uint64_t rdata = cacheConn.RD_C_out.load(std::memory_order_acquire);
-                MEM_WB_next.ALUOutM_O = rdata;  // ← sobrescribe el default solo para LDR
-
-                std::cout << "[PE" << m_pe_id << "] "
-                    << "LDR" << (m_lsu.is_byte ? "B" : "64")
-                    << " DONE addr=0x" << std::hex << m_lsu.addr
-                    << " data=0x" << rdata << std::dec << "\n";
-            }
-            else {
-                std::cout << "[PE" << m_pe_id << "] "
-                    << "STR" << (m_lsu.is_byte ? "B" : "64")
-                    << " DONE addr=0x" << std::hex << m_lsu.addr
-                    << std::dec << "\n";
-            }
-
-            // Pulso ACK (se baja al INICIO del próximo ciclo)
-            cacheConn.C_READY_ACK.store(true, std::memory_order_release);
-            m_ack_pulse = true;
-
-            // Liberar el LSU para permitir el siguiente acceso
-            m_lsu.inflight = false;
-        }
     }
-
-
 
     // ============================================================================
     // STAGE: WRITEBACK
