@@ -59,7 +59,7 @@ void CacheMemTable::render(const char* id) {
 
     // ========== CONTROLES DE NAVEGACIÓN ==========
     // ===== 1. MÁS ESPACIO VERTICAL PARA EL NAVEGADOR =====
-    const float CTRL_HEIGHT = 250.0f;
+    const float CTRL_HEIGHT = 200.0f;
     const float TABLE_HEIGHT = avail.y - CTRL_HEIGHT - 10.0f;
 
     ImGui::BeginChild("##CacheControls", ImVec2(avail.x, CTRL_HEIGHT), true);

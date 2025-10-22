@@ -20,6 +20,9 @@ constexpr int OFFSET_BITS = ilog2(LINE_BYTES);
 constexpr int INDEX_BITS = ilog2(SETS);
 constexpr int TAG_BITS = 64 - OFFSET_BITS - INDEX_BITS;
 
+// Sentinela para "tag inválido" (56 bits en 1)
+static constexpr uint64_t INVALID_TAG_SENTINEL = 0x00FFFFFFFFFFFFFFULL;
+
 // ============================================================
 // MESI y Bus
 // ============================================================
@@ -36,7 +39,7 @@ struct BusToMaster;
 // Estructuras básicas de la caché
 // ============================================================
 struct CacheLine {
-    uint64_t  tag = 0;
+    uint64_t  tag = INVALID_TAG_SENTINEL; // <<< antes estaba en 0
     Mesi      state = Mesi::I;
     LineData  data{};
     bool      valid = false;

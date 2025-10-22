@@ -1,0 +1,131 @@
+START:    
+    ; Dispatch a codigo especifico segun PEID
+    CMPI SIDS, #0
+    BEQ .SETUP_PE0
+    CMPI SIDS, #1
+    BEQ .SETUP_PE1
+    CMPI SIDS, #2
+    BEQ .SETUP_PE2
+    CMPI SIDS, #3
+    BEQ .SETUP_PE3
+    SWI
+
+; =========================
+; PE0: llena todos los sets/ways y fuerza evicciones (WB)
+; =========================
+.SETUP_PE0:
+    ; ---- SET 0 ----
+    FMOVI REG1, #1.0
+    MOVI  REG2, #0            ; A0 = 0          (set 0, tag 0)
+    STR   REG1, [REG2]        ; -> M
+    FMOVI REG1, #2.0
+    MOVI  REG2, #256          ; B0 = 256        (set 0, tag 1)
+    STR   REG1, [REG2]        ; -> M
+    MOVI  REG2, #512          ; C0 = 512        (set 0, tag 2)  (tercera)
+    LDR   REG0, [REG2]        ; miss -> evicta (WB si víctima estaba M)
+
+    ; ---- SET 1 ----
+    FMOVI REG1, #3.0
+    MOVI  REG2, #32           ; A1
+    STR   REG1, [REG2]
+    FMOVI REG1, #4.0
+    MOVI  REG2, #288          ; B1
+    STR   REG1, [REG2]
+    MOVI  REG2, #544          ; C1
+    LDR   REG0, [REG2]
+
+    ; ---- SET 2 ----
+    FMOVI REG1, #5.0
+    MOVI  REG2, #64           ; A2
+    STR   REG1, [REG2]
+    FMOVI REG1, #6.0
+    MOVI  REG2, #320          ; B2
+    STR   REG1, [REG2]
+    MOVI  REG2, #576          ; C2
+    LDR   REG0, [REG2]
+
+    ; ---- SET 3 ----
+    FMOVI REG1, #7.0
+    MOVI  REG2, #96           ; A3
+    STR   REG1, [REG2]
+    FMOVI REG1, #8.0
+    MOVI  REG2, #352          ; B3
+    STR   REG1, [REG2]
+    MOVI  REG2, #608          ; C3
+    LDR   REG0, [REG2]
+
+    ; ---- SET 4 ----
+    FMOVI REG1, #9.0
+    MOVI  REG2, #128          ; A4
+    STR   REG1, [REG2]
+    FMOVI REG1, #10.0
+    MOVI  REG2, #384          ; B4
+    STR   REG1, [REG2]
+    MOVI  REG2, #640          ; C4
+    LDR   REG0, [REG2]
+
+    ; ---- SET 5 ----
+    FMOVI REG1, #11.0
+    MOVI  REG2, #160          ; A5
+    STR   REG1, [REG2]
+    FMOVI REG1, #12.0
+    MOVI  REG2, #416          ; B5
+    STR   REG1, [REG2]
+    MOVI  REG2, #672          ; C5
+    LDR   REG0, [REG2]
+
+    ; ---- SET 6 ----
+    FMOVI REG1, #13.0
+    MOVI  REG2, #192          ; A6
+    STR   REG1, [REG2]
+    FMOVI REG1, #14.0
+    MOVI  REG2, #448          ; B6
+    STR   REG1, [REG2]
+    MOVI  REG2, #704          ; C6
+    LDR   REG0, [REG2]
+
+    ; ---- SET 7 ----
+    FMOVI REG1, #15.0
+    MOVI  REG2, #224          ; A7
+    STR   REG1, [REG2]
+    FMOVI REG1, #16.0
+    MOVI  REG2, #480          ; B7
+    STR   REG1, [REG2]
+    MOVI  REG2, #736          ; C7
+    LDR   REG0, [REG2]
+
+    ; un rato para mirar
+    NOP ; x24
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+
+    SWI
+
+; Otros PEs no intervienen (así no comparten líneas y no “ensucian” el test)
+.SETUP_PE1:
+    SWI
+.SETUP_PE2:
+    SWI
+.SETUP_PE3:
+    SWI

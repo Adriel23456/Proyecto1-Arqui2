@@ -1,0 +1,140 @@
+START:    
+    ; Dispatch a codigo especifico segun PEID
+    CMPI SIDS, #0
+    BEQ .SETUP_PE0
+    CMPI SIDS, #1
+    BEQ .SETUP_PE1
+    CMPI SIDS, #2
+    BEQ .SETUP_PE2
+    CMPI SIDS, #3
+    BEQ .SETUP_PE3
+    SWI                         ; PEID invalido - terminar
+
+; =========================
+; PE0: E (tras LDR) -> S (cuando PE1 LDR) -> M (tras STR propio)
+; luego queda I cuando PE1 haga STR
+; =========================
+.SETUP_PE0:
+    ; 1) PE0: LDR primero -> E
+    MOVI  REG2, #16
+    LDR   REG1, [REG2]          ; Miss -> BusRd -> E (no hay sharers)
+
+    ; Esperar a que PE1 haga LDR (S en ambos)
+    NOP ; x24
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+
+    ; 3) PE0: STR -> BusUpgr (S->M) e invalida PE1
+    FMOVI REG1, #42.0
+    STR   REG1, [REG2]
+
+    ; Esperar a que PE1 haga su STR (PE0 quedará I después de ese STR)
+    NOP ; x24
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+
+    SWI
+
+; =========================
+; PE1: I -> S (LDR) -> I (cuando PE0 STR) -> M (STR propio: C2C desde PE0:M)
+; =========================
+.SETUP_PE1:
+    ; Dejar a PE0 correr primero hasta su LDR
+    NOP ; x8
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+
+    ; 2) PE1: LDR mismo addr -> S/S (degrada E de PE0 a S)
+    MOVI  REG2, #16
+    LDR   REG1, [REG2]
+
+    ; Esperar a que PE0 haga STR (yo paso a I)
+    NOP ; x16
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+
+    ; 4) PE1: STR desde I -> BusRdX, C2C desde PE0:M, invalida a PE0, PE1 queda M
+    FMOVI REG1, #84.0
+    STR   REG1, [REG2]
+
+    ; margen para observación
+    NOP ; x12
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+
+    SWI
+
+; Otros PEs no intervienen
+.SETUP_PE2:
+    SWI
+.SETUP_PE3:
+    SWI
