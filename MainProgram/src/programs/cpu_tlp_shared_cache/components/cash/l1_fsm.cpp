@@ -1,20 +1,7 @@
-//l1_fsm.cpp
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_utils.h"
 #include "programs/cpu_tlp_shared_cache/components/bus/interconnect_bus.h" // MasterToBus / BusToMaster
 #include <iostream>
-
-// --------- util de logging: imprime sólo cuando cambia el valor ----------
-#define CONCAT_IMPL(x,y) x##y
-#define CONCAT(x,y) CONCAT_IMPL(x,y)
-#define LOG_ON_CHANGE(TAG, EXPR) do {                                \
-  static auto CONCAT(_last_, __LINE__) = (EXPR);                     \
-  auto        CONCAT(_now_,  __LINE__) = (EXPR);                     \
-  if (CONCAT(_now_, __LINE__) != CONCAT(_last_, __LINE__)) {         \
-    std::cout << TAG << (CONCAT(_now_, __LINE__)) << "\n";           \
-    CONCAT(_last_, __LINE__) = CONCAT(_now_, __LINE__);              \
-  }                                                                  \
-} while(0)
 
 static const char* stateName(L1State s) {
     switch (s) {
@@ -45,6 +32,13 @@ void L1Cache::reset() {
     pend_ = {};
     prev_req_ = false;
     temp_fill_.fill(0);
+
+    // Reset de snapshots de log
+    dbg_prev_fsm_ = L1State::IDLE;
+    dbg_prev_B_REQ_ = false;
+    dbg_prev_B_GRANT_ = false;
+    dbg_prev_B_RVALID_ = false;
+    dbg_prev_B_DONE_ = false;
 }
 
 void L1Cache::beginAccess(const CpuReq& req) {
@@ -55,16 +49,50 @@ void L1Cache::beginAccess(const CpuReq& req) {
     if (fsm_ == L1State::WAIT_ACK && in_.C_READY_ACK) {
         out_.C_READY = false;
         fsm_ = L1State::IDLE;
-        // prev_req_ se actualiza abajo con el nivel actual
     }
 
-    // *** edge detect de C_REQUEST_M ***
+    // Edge detect de C_REQUEST_M
     bool rising_req = (in_.C_REQUEST_M && !prev_req_);
     prev_req_ = in_.C_REQUEST_M;
 
     // Nuevo acceso sólo en flanco
     if (fsm_ == L1State::IDLE && rising_req && !out_.C_READY) {
         fsm_ = L1State::LOOKUP;
+    }
+}
+
+void L1Cache::logSignals_() {
+    // Estado de la FSM (por instancia)
+    if (fsm_ != dbg_prev_fsm_) {
+        std::cout << "[L1" << l1_id_ << "] FSM: "
+            << stateName(dbg_prev_fsm_) << " -> " << stateName(fsm_) << "\n";
+        dbg_prev_fsm_ = fsm_;
+    }
+
+    // Señales de bus (solo si hay puertos conectados)
+    if (pm_out_) {
+        bool now = pm_out_->B_REQ.load(std::memory_order_acquire);
+        if (now != dbg_prev_B_REQ_) {
+            std::cout << "[L1" << l1_id_ << "] B_REQ=" << now << "\n";
+            dbg_prev_B_REQ_ = now;
+        }
+    }
+    if (pm_in_) {
+        bool g = pm_in_->B_GRANT.load(std::memory_order_acquire);
+        if (g != dbg_prev_B_GRANT_) {
+            std::cout << "[L1" << l1_id_ << "] B_GRANT=" << g << "\n";
+            dbg_prev_B_GRANT_ = g;
+        }
+        bool rv = pm_in_->B_RVALID.load(std::memory_order_acquire);
+        if (rv != dbg_prev_B_RVALID_) {
+            std::cout << "[L1" << l1_id_ << "] B_RVALID=" << rv << "\n";
+            dbg_prev_B_RVALID_ = rv;
+        }
+        bool dn = pm_in_->B_DONE.load(std::memory_order_acquire);
+        if (dn != dbg_prev_B_DONE_) {
+            std::cout << "[L1" << l1_id_ << "] B_DONE=" << dn << "\n";
+            dbg_prev_B_DONE_ = dn;
+        }
     }
 }
 
@@ -75,22 +103,8 @@ void L1Cache::tick() {
     using std::memory_order_relaxed;
     using std::memory_order_acq_rel;
 
-    // --------- LOG COMPACTO: sólo cambios de estado/señales ----------
-    {
-        static L1State last = L1State::IDLE;
-        if (fsm_ != last) {
-            std::cout << "[L1" << l1_id_ << "] FSM: " << stateName(last)
-                << " -> " << stateName(fsm_) << "\n";
-            last = fsm_;
-        }
-        if (pm_out_) LOG_ON_CHANGE("[L1] B_REQ=", pm_out_->B_REQ.load(memory_order_acquire));
-        if (pm_in_) {
-            LOG_ON_CHANGE("[L1] B_GRANT=", pm_in_->B_GRANT.load(memory_order_acquire));
-            LOG_ON_CHANGE("[L1] B_RVALID=", pm_in_->B_RVALID.load(memory_order_acquire));
-            LOG_ON_CHANGE("[L1] B_DONE=", pm_in_->B_DONE.load(memory_order_acquire));
-        }
-    }
-    // ----------------------------------------------------------------
+    // Log compacto por instancia
+    logSignals_();
 
     switch (fsm_) {
 
@@ -125,6 +139,10 @@ void L1Cache::tick() {
                     pend_.req_addr_line = (in_.ALUOut_M & ~((1ULL << OFFSET_BITS) - 1ULL));
                     pend_.set = p.set;
                     pend_.victim = hit_way;
+
+                    // Congelamos offsets del acceso para aplicar en FILL/UPGR
+                    pend_.byte_in_line = p.byte_in_line;
+                    pend_.dw_in_line = p.dw_in_line;
 
                     if (pm_out_) {
                         pm_out_->B_CMD = BusCmd::BusUpgr;
@@ -174,6 +192,10 @@ void L1Cache::tick() {
                 pend_.wb_line = vict.data;
             }
 
+            // Congelar offsets del acceso que provocó el miss
+            pend_.byte_in_line = p.byte_in_line;
+            pend_.dw_in_line = p.dw_in_line;
+
             // Decide comando según acceso: read→BusRd, write→BusRdX (RFO)
             pend_.cmd = (!in_.C_WE_M) ? BusCmd::BusRd : BusCmd::BusRdX;
 
@@ -196,7 +218,7 @@ void L1Cache::tick() {
 
     case L1State::WAIT_GRANT: {
         if (pm_in_ && pm_in_->B_GRANT.load(memory_order_acquire)) {
-            // Flags efímeros (relaxed)
+            // Flags efímeros (relaxed) pero latcheados por el bus durante la tx
             pend_.saw_shared |= pm_in_->B_SHARED_SEEN.load(memory_order_relaxed);
             pend_.saw_hitm |= pm_in_->B_HITM_SEEN.load(memory_order_relaxed);
             fsm_ = L1State::WAIT_DATA;
@@ -206,7 +228,7 @@ void L1Cache::tick() {
     case L1State::WAIT_DATA: {
         if (!pm_in_) break;
 
-        // Mantener copia de flags efímeros
+        // Mantener copia de flags
         pend_.saw_shared |= pm_in_->B_SHARED_SEEN.load(memory_order_relaxed);
         pend_.saw_hitm |= pm_in_->B_HITM_SEEN.load(memory_order_relaxed);
 
@@ -237,21 +259,21 @@ void L1Cache::tick() {
     } break;
 
     case L1State::FILL: {
-        const auto p = splitAddress(in_.ALUOut_M);
+        const auto p_now = splitAddress(in_.ALUOut_M); // solo para set/tag si quieres verificar
         auto& set = sets_[pend_.set];
 
         if (pend_.cmd == BusCmd::BusUpgr) {
             // Upgrade no trae datos; solo cambiar S→M y aplicar store
-            int way = findWay(pend_.set, p.tag);
+            int way = findWay(pend_.set, (pend_.req_addr_line >> (OFFSET_BITS + INDEX_BITS)));
             if (way >= 0) {
                 auto& line = set.ways[way];
                 line.state = Mesi::M;
                 if (in_.C_ISB_M) {
-                    write8_in_line(line, p.byte_in_line,
+                    write8_in_line(line, pend_.byte_in_line,
                         static_cast<uint8_t>(in_.RD_Rm_Special_M & 0xFF));
                 }
-                else if ((p.off & 0x7) == 0) {
-                    write64_in_line(line, p.dw_in_line, in_.RD_Rm_Special_M);
+                else {
+                    write64_in_line(line, pend_.dw_in_line, in_.RD_Rm_Special_M);
                 }
                 set.lru = (way == 0) ? 0 : 1;
             }
@@ -274,20 +296,20 @@ void L1Cache::tick() {
             // E si nadie más la tiene; S si hubo shared/hitm
             vict.state = (pend_.saw_shared || pend_.saw_hitm) ? Mesi::S : Mesi::E;
 
-            // Entregar dato de lectura al CPU
+            // Entregar dato de lectura al CPU: usar offsets CONGELADOS
             if (in_.C_ISB_M)
-                out_.RD_C_out = static_cast<uint64_t>(read8_in_line(vict, p.byte_in_line));
-            else if ((p.off & 0x7) == 0)
-                out_.RD_C_out = read64_in_line(vict, p.dw_in_line);
+                out_.RD_C_out = static_cast<uint64_t>(read8_in_line(vict, pend_.byte_in_line));
+            else
+                out_.RD_C_out = read64_in_line(vict, pend_.dw_in_line);
 
         }
-        else { // BusRdX (RFO) => terminar en M y aplicar el store
+        else { // BusRdX (RFO) => terminar en M y aplicar el store usando offsets CONGELADOS
             vict.state = Mesi::M;
             if (in_.C_ISB_M)
-                write8_in_line(vict, p.byte_in_line,
+                write8_in_line(vict, pend_.byte_in_line,
                     static_cast<uint8_t>(in_.RD_Rm_Special_M & 0xFF));
-            else if ((p.off & 0x7) == 0)
-                write64_in_line(vict, p.dw_in_line, in_.RD_Rm_Special_M);
+            else
+                write64_in_line(vict, pend_.dw_in_line, in_.RD_Rm_Special_M);
         }
 
         // LRU: la víctima pasa a MRU

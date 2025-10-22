@@ -13,35 +13,35 @@ START:
 .SETUP_PE0:
     FMOVI REG1, #16.0          ; REG1 = 16.0
     MOVI REG2, #16             ; REG2 = 16 (direccin base)
-    LDR REG1, [REG2]           ; REG1 = Memoria[16] (probablemente 0 si no se inicializ)
+    STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
     NOP
     NOP
     NOP
-    SWI                        ; Estado final: REG1=Memoria[16], REG2=16
+    SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[16]=16.0
 
 .SETUP_PE1:
     FMOVI REG1, #16.0          ; REG1 = 16.0
     MOVI REG2, #16             ; REG2 = 16 (direccin base)
-    LDR REG1, [REG2]           ; REG1 = Memoria[16] (probablemente 0 si no se inicializ)
+    STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
     NOP
     NOP
     NOP
-    SWI                        ; Estado final: REG1=Memoria[16], REG2=16
+    SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[16]=16.0
 
 .SETUP_PE2:
     FMOVI REG1, #16.0          ; REG1 = 16.0
     MOVI REG2, #16             ; REG2 = 16 (direccin base)
-    LDR REG1, [REG2]           ; REG1 = Memoria[16] (probablemente 0 si no se inicializ)
+    STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
     NOP
     NOP
     NOP
-    SWI                        ; Estado final: REG1=Memoria[16], REG2=16
+    SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[16]=16.0
 
 .SETUP_PE3:
     FMOVI REG1, #16.0          ; REG1 = 16.0
     MOVI REG2, #16             ; REG2 = 16 (direccin base)
-    LDR REG1, [REG2]           ; REG1 = Memoria[16] (probablemente 0 si no se inicializ)
+    STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
     NOP
     NOP
     NOP
-    SWI                        ; Estado final: REG1=Memoria[16], REG2=16
+    SWI                        ; Estado final: REG1=16.0, REG2=16, Memoria[16]=16.0

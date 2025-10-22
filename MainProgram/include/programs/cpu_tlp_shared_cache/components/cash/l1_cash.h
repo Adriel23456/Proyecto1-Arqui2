@@ -35,8 +35,6 @@ struct BusToMaster;
 // ============================================================
 // Estructuras básicas de la caché
 // ============================================================
-using LineDataAlias = LineData;
-
 struct CacheLine {
     uint64_t  tag = 0;
     Mesi      state = Mesi::I;
@@ -46,7 +44,7 @@ struct CacheLine {
 
 struct CacheSet {
     std::array<CacheLine, WAYS> ways{};
-    uint8_t lru = 0;
+    uint8_t lru = 0;  // 0 => way0 MRU, 1 => way1 MRU (política simple)
 };
 
 struct AddrParts {
@@ -83,12 +81,12 @@ enum class L1State : uint8_t {
 };
 
 // ============================================================
-// ESTRUCTURA PARA EXPORTAR INFO DE LÍNEA (THREAD-SAFE)
+// Estructura para exportar info de línea (thread-safe)
 // ============================================================
 struct CacheLineInfo {
     uint64_t tag;
     Mesi state;
-    std::array<uint8_t, 32> data;  // Usar tipo explícito en lugar de LineData
+    std::array<uint8_t, 32> data;
     bool valid;
 };
 
@@ -112,10 +110,9 @@ public:
 
     SnoopResp onSnoop(const SnoopReq& s);
 
-    // ===== MÉTODO THREAD-SAFE EN L1Cache =====
-    // Este método ya está implementado correctamente con mutex
+    // ===== Método thread-safe ya existente =====
     CacheLineInfo getLineInfo(uint32_t set, uint32_t way) const {
-        std::lock_guard<std::mutex> lk(mtx_);  // PROTECCIÓN CON MUTEX
+        std::lock_guard<std::mutex> lk(mtx_);
         if (set >= SETS || way >= WAYS) {
             CacheLineInfo info;
             info.tag = 0;
@@ -128,9 +125,9 @@ public:
         CacheLineInfo info;
         info.tag = line.tag;
         info.state = line.state;
-        info.data = line.data;  // COPIA COMPLETA (thread-safe)
+        info.data = line.data;
         info.valid = line.valid;
-        return info;  // RETORNA COPIA (no referencia)
+        return info;
     }
 
     static constexpr int offsetBits() { return OFFSET_BITS; }
@@ -139,7 +136,9 @@ public:
 
 private:
     friend AddrParts splitAddress(uint64_t addr);
-    int findWay(uint32_t set, uint64_t tag) const;
+    int  findWay(uint32_t set, uint64_t tag) const;
+    void logSignals_(); // NUEVO: logging “on-change” por instancia
+
     bool pe_req_block_ = false;
 
     std::array<CacheSet, SETS> sets_{};
@@ -153,6 +152,13 @@ private:
 
     bool prev_req_{ false };
 
+    // --- Debug log snapshots (por instancia) ---
+    L1State dbg_prev_fsm_{ L1State::IDLE };
+    bool    dbg_prev_B_REQ_{ false };
+    bool    dbg_prev_B_GRANT_{ false };
+    bool    dbg_prev_B_RVALID_{ false };
+    bool    dbg_prev_B_DONE_{ false };
+
     struct PendingTx {
         BusCmd   cmd{ BusCmd::BusRd };
         uint64_t req_addr_line{ 0 };
@@ -165,6 +171,10 @@ private:
 
         bool     saw_shared{ false };
         bool     saw_hitm{ false };
+
+        // Congelamos offsets del acceso que provocó el miss
+        uint8_t  byte_in_line{ 0 };
+        uint8_t  dw_in_line{ 0 };
     } pend_;
 
     LineData temp_fill_{};

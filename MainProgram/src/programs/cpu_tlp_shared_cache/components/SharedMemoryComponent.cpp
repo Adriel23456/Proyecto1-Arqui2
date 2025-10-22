@@ -1,11 +1,25 @@
-﻿//SharedMemoryComponent.cpp
-#include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
+﻿#include "programs/cpu_tlp_shared_cache/components/SharedMemoryComponent.h"
 #include "programs/cpu_tlp_shared_cache/widgets/Log.h"
 #include <iostream>
 #include <chrono>
 #include <thread>
 
 namespace cpu_tlp {
+
+    using std::memory_order_acquire;
+    using std::memory_order_release;
+    using std::memory_order_relaxed;
+
+    static inline void dbg_ram(const char* msg, uint16_t addr, bool we, uint64_t w, uint64_t r) {
+#if 1
+        std::cout << "[DRAM] " << msg
+            << " addr=0x" << std::hex << (unsigned)addr
+            << " we=" << std::dec << (we ? 1 : 0)
+            << " w=0x" << std::hex << w
+            << " r=0x" << std::hex << r
+            << std::dec << "\n";
+#endif
+    }
 
     SharedMemoryComponent::SharedMemoryComponent()
         : m_sharedData(nullptr)
@@ -33,24 +47,28 @@ namespace cpu_tlp {
                 << SharedMemory::MEM_SIZE_WORDS << " words of 64 bits)\n";
             });
 
+        // Inicialización determinista recomendada (útil para tus tests)
+        m_memory.reset();
+        m_memory.initTestPattern_0_1_2_3();
+
         // Poner el canal RAMConnection en estado conocido
         if (m_sharedData) {
             auto& R = m_sharedData->ram_connection;
             for (int pe = 0; pe < 4; ++pe) {
                 auto& C = m_sharedData->cache_connections[pe];
-                C.RD_C_out.store(0, std::memory_order_release);
-                C.C_READY.store(false, std::memory_order_release);
+                C.RD_C_out.store(0, memory_order_release);
+                C.C_READY.store(false, memory_order_release);
             }
-            R.request_active.store(false, std::memory_order_release);
-            R.response_ready.store(false, std::memory_order_release);
-            R.write_enable.store(false, std::memory_order_release);
-            R.request_address.store(0, std::memory_order_release);
-            R.write_data.store(0, std::memory_order_release);
-            R.read_data.store(0, std::memory_order_release);
+            R.request_active.store(false, memory_order_release);
+            R.response_ready.store(false, memory_order_release);
+            R.write_enable.store(false, memory_order_release);
+            R.request_address.store(0, memory_order_release);
+            R.write_data.store(0, memory_order_release);
+            R.read_data.store(0, memory_order_release);
         }
 
         m_isRunning = true;
-        m_sharedData->system_should_stop.store(false, std::memory_order_release);
+        m_sharedData->system_should_stop.store(false, memory_order_release);
 
         m_executionThread = std::make_unique<std::thread>(&SharedMemoryComponent::threadMain, this);
 
@@ -63,7 +81,7 @@ namespace cpu_tlp {
         std::cout << "[SharedMemory] Shutting down...\n";
 
         if (m_sharedData) {
-            m_sharedData->system_should_stop.store(true, std::memory_order_release); // ← en vez de '='
+            m_sharedData->system_should_stop.store(true, memory_order_release);
         }
 
         if (m_executionThread && m_executionThread->joinable()) {
@@ -79,6 +97,12 @@ namespace cpu_tlp {
         return m_isRunning;
     }
 
+    // FSM del backend DRAM (determinístico):
+    //  - Espera flanco de subida de request_active
+    //  - Latch de address/write_enable/write_data UNA sola vez
+    //  - Servicio (read/write) UNA sola vez
+    //  - Publica response_ready=1 (release)
+    //  - Espera a que Interconnect consuma (response_ready=0) y baje request_active=0
     void SharedMemoryComponent::threadMain() {
         using namespace std::chrono_literals;
         std::cout << "[SharedMemory] Thread started\n";
@@ -86,29 +110,38 @@ namespace cpu_tlp {
         auto& R = m_sharedData->ram_connection;
 
         while (!m_sharedData->system_should_stop.load(std::memory_order_acquire)) {
+            // Handshake por NIVEL:
+            // - Si hay request_active==1 y response_ready==0 -> SERVIR UNA VEZ
+            // - Interconnect bajará response_ready=0 + request_active=0 tras consumir
+            const bool req = R.request_active.load(std::memory_order_acquire);
+            const bool rsp = R.response_ready.load(std::memory_order_acquire);
 
-            // Únicamente backend DRAM vía RAMConnection (llamado por el Interconnect)
-            if (R.request_active.load(std::memory_order_acquire)) {
-                if (!R.response_ready.load(std::memory_order_acquire)) {
-                    const uint16_t addr = R.request_address.load(std::memory_order_acquire);
-                    if (R.write_enable.load(std::memory_order_acquire)) {
-                        const uint64_t w = R.write_data.load(std::memory_order_acquire);
-                        m_memory.write(addr, w);
-                        R.response_ready.store(true, std::memory_order_release);
-                    }
-                    else {
-                        const uint64_t val = m_memory.read(addr);
-                        R.read_data.store(val, std::memory_order_release);
-                        R.response_ready.store(true, std::memory_order_release);
-                    }
-                    // request_active lo limpia el Interconnect al consumir response_ready
+            if (req && !rsp) {
+                const uint16_t addr = R.request_address.load(std::memory_order_acquire);
+                const bool     we = R.write_enable.load(std::memory_order_acquire);
+                const uint64_t w = R.write_data.load(std::memory_order_acquire);
+
+                uint64_t rval = 0;
+                if (we) {
+                    m_memory.write(addr, w);
+                    rval = w; // opcional: eco en lecturas de depuración
                 }
+                else {
+                    rval = m_memory.read(addr);
+                }
+
+                // Publicar payload y luego el flag (release)
+                R.read_data.store(rval, std::memory_order_release);
+                R.response_ready.store(true, std::memory_order_release);
+
+                dbg_ram("SERVE", addr, we, w, rval);
             }
             else {
-                std::this_thread::sleep_for(5us);
+                std::this_thread::sleep_for(3us);
             }
         }
 
         std::cout << "[SharedMemory] Thread ending\n";
     }
-}
+
+} // namespace cpu_tlp

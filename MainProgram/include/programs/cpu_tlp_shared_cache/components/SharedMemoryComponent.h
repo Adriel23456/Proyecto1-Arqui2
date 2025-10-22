@@ -7,6 +7,11 @@
 
 namespace cpu_tlp {
 
+    // Backend DRAM determinístico con handshake por flanco:
+    // - Latch de request en rising edge de request_active
+    // - Servicio único por solicitud
+    // - Publica response_ready (release)
+    // - Espera a que Interconnect limpie response_ready y baje request_active
     class SharedMemoryComponent {
     public:
         SharedMemoryComponent();

@@ -76,7 +76,7 @@ namespace cpu_tlp {
             if (m_bus) {
                 m_bus->tick();   // arbitra, difunde snoops, C2C/DRAM, etc.
             }
-            std::this_thread::sleep_for(50us); // suaviza CPU
+            std::this_thread::sleep_for(1us); // suaviza CPU
         }
     }
 
