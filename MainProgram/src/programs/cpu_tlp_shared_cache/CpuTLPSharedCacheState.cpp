@@ -1,19 +1,23 @@
 ﻿#include "programs/cpu_tlp_shared_cache/CpuTLPSharedCacheState.h"
+#include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"
+#include "programs/cpu_tlp_shared_cache/views/PE0MemView.h"
+#include "programs/cpu_tlp_shared_cache/views/PE1MemView.h"
+#include "programs/cpu_tlp_shared_cache/views/PE2MemView.h"
+#include "programs/cpu_tlp_shared_cache/views/PE3MemView.h"
+#include <sstream>
+#include <iomanip>
+
 #include "programs/cpu_tlp_shared_cache/CpuTLPControlAPI.h"
 #include "programs/cpu_tlp_shared_cache/views/ICpuTLPView.h"
 #include "programs/cpu_tlp_shared_cache/views/GeneralView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE0CPUView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE0RegView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE0MemView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE1CPUView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE1RegView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE1MemView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE2CPUView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE2RegView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE2MemView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE3CPUView.h"
 #include "programs/cpu_tlp_shared_cache/views/PE3RegView.h"
-#include "programs/cpu_tlp_shared_cache/views/PE3MemView.h"
 #include "programs/cpu_tlp_shared_cache/views/RAMView.h"
 #include "programs/cpu_tlp_shared_cache/views/AnalysisDataView.h"
 #include "programs/cpu_tlp_shared_cache/components/InstructionMemoryComponent.h"
@@ -24,8 +28,6 @@
 #include "programs/cpu_tlp_shared_cache/components/PE3Component.h"
 #include "programs/cpu_tlp_shared_cache/views/CompilerView.h"
 #include "programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h"
-
-
 #include <imgui.h>
 #include <iostream>
 #include <memory>
@@ -36,117 +38,231 @@
 CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindow* win)
     : State(sm, win) {
 
+    // ============================================================
     // 1) Construir UNA SOLA estructura de datos compartidos
+    // ============================================================
     m_cpuSystemData = std::make_shared<cpu_tlp::CPUSystemSharedData>();
 
+    // ============================================================
     // 2) Lanzar InstructionMemory
+    // ============================================================
     m_instructionMemory = std::make_unique<cpu_tlp::InstructionMemoryComponent>();
     if (!m_instructionMemory->initialize(m_cpuSystemData)) {
         std::cerr << "[CpuTLP] InstructionMemory init failed\n";
     }
 
-
-    // 2.5) Lanzar SharedMemory (NUEVO)
+    // ============================================================
+    // 3) Lanzar SharedMemory (necesario para RAM)
+    // ============================================================
     m_sharedMemoryComponent = std::make_unique<cpu_tlp::SharedMemoryComponent>();
     if (!m_sharedMemoryComponent->initialize(m_cpuSystemData)) {
         std::cerr << "[CpuTLP] SharedMemory init failed\n";
     }
 
-        // 2.7) Lanzar Interconnect (4 maestros) y cablearlo a RAM
+    // ============================================================
+    // 4) Lanzar Interconnect (4 maestros) y cablearlo a RAM
+    // ============================================================
     m_interconnect = std::make_unique<cpu_tlp::InterconnectComponent>();
     if (!m_interconnect->initialize(m_cpuSystemData, /*masters=*/4)) {
         std::cerr << "[CpuTLP] Interconnect init failed\n";
     }
 
-    // 2.8) Crear L1s y conectarlas al bus
-    m_l1c0 = std::make_unique<cpu_tlp::L1Component>(0);
-    m_l1c1 = std::make_unique<cpu_tlp::L1Component>(1);
-    m_l1c2 = std::make_unique<cpu_tlp::L1Component>(2);
-    m_l1c3 = std::make_unique<cpu_tlp::L1Component>(3);
-
+    // ============================================================
+    // 5) Crear L1s y conectarlas al bus
+    // ============================================================
     auto* bus = m_interconnect->raw(); // Interconnect*
-    if (!m_l1c0->initialize(m_cpuSystemData, bus)) std::cerr << "[CpuTLP] L1(0) init failed\n";
-    if (!m_l1c1->initialize(m_cpuSystemData, bus)) std::cerr << "[CpuTLP] L1(1) init failed\n";
-    if (!m_l1c2->initialize(m_cpuSystemData, bus)) std::cerr << "[CpuTLP] L1(2) init failed\n";
-    if (!m_l1c3->initialize(m_cpuSystemData, bus)) std::cerr << "[CpuTLP] L1(3) init failed\n";
 
+    m_l1c0 = std::make_unique<cpu_tlp::L1Component>(0);
+    if (!m_l1c0->initialize(m_cpuSystemData, bus)) {
+        std::cerr << "[CpuTLP] L1(0) init failed\n";
+    }
 
-    // 3) Crear PE0
+    m_l1c1 = std::make_unique<cpu_tlp::L1Component>(1);
+    if (!m_l1c1->initialize(m_cpuSystemData, bus)) {
+        std::cerr << "[CpuTLP] L1(1) init failed\n";
+    }
+
+    m_l1c2 = std::make_unique<cpu_tlp::L1Component>(2);
+    if (!m_l1c2->initialize(m_cpuSystemData, bus)) {
+        std::cerr << "[CpuTLP] L1(2) init failed\n";
+    }
+
+    m_l1c3 = std::make_unique<cpu_tlp::L1Component>(3);
+    if (!m_l1c3->initialize(m_cpuSystemData, bus)) {
+        std::cerr << "[CpuTLP] L1(3) init failed\n";
+    }
+
+    // ============================================================
+    // 6) Crear PE0
+    // ============================================================
     m_pe0 = std::make_unique<cpu_tlp::PE0Component>(0);
     if (!m_pe0->initialize(m_cpuSystemData)) {
         std::cerr << "[CpuTLP] PE0 init failed\n";
     }
 
-    // 4) Crear PE1
+    // ============================================================
+    // 7) Crear PE1
+    // ============================================================
     m_pe1 = std::make_unique<cpu_tlp::PE1Component>(1);
     if (!m_pe1->initialize(m_cpuSystemData)) {
         std::cerr << "[CpuTLP] PE1 init failed\n";
     }
 
-    // 5) Crear PE2
+    // ============================================================
+    // 8) Crear PE2
+    // ============================================================
     m_pe2 = std::make_unique<cpu_tlp::PE2Component>(2);
     if (!m_pe2->initialize(m_cpuSystemData)) {
         std::cerr << "[CpuTLP] PE2 init failed\n";
     }
 
-    // 6) Crear PE3
+    // ============================================================
+    // 9) Crear PE3
+    // ============================================================
     m_pe3 = std::make_unique<cpu_tlp::PE3Component>(3);
     if (!m_pe3->initialize(m_cpuSystemData)) {
         std::cerr << "[CpuTLP] PE3 init failed\n";
     }
 
+    // ============================================================
+    // 10) Inicializar contadores SWI
+    // ============================================================
     m_swiSeenCount.fill(0);
     m_activeSwiPopupPe = -1;
 
-    // 7) Registrar callbacks PE0
+    // ============================================================
+    // 11) Registrar callbacks PE0
+    // ============================================================
     cpu_tlp_ui::onResetPE0 = [this] { this->resetPE0(); };
     cpu_tlp_ui::onStepPE0 = [this] { this->stepPE0(); };
     cpu_tlp_ui::onStepUntilPE0 = [this](int n) { this->stepUntilPE0(n); };
     cpu_tlp_ui::onStepIndefinitelyPE0 = [this] { this->stepIndefinitelyPE0(); };
     cpu_tlp_ui::onStopPE0 = [this] { this->stopPE0(); };
 
-    // 8) Registrar callbacks PE1
+    // ============================================================
+    // 12) Registrar callbacks PE1
+    // ============================================================
     cpu_tlp_ui::onResetPE1 = [this] { this->resetPE1(); };
     cpu_tlp_ui::onStepPE1 = [this] { this->stepPE1(); };
     cpu_tlp_ui::onStepUntilPE1 = [this](int n) { this->stepUntilPE1(n); };
     cpu_tlp_ui::onStepIndefinitelyPE1 = [this] { this->stepIndefinitelyPE1(); };
     cpu_tlp_ui::onStopPE1 = [this] { this->stopPE1(); };
 
-    // 9) Registrar callbacks PE2
+    // ============================================================
+    // 13) Registrar callbacks PE2
+    // ============================================================
     cpu_tlp_ui::onResetPE2 = [this] { this->resetPE2(); };
     cpu_tlp_ui::onStepPE2 = [this] { this->stepPE2(); };
     cpu_tlp_ui::onStepUntilPE2 = [this](int n) { this->stepUntilPE2(n); };
     cpu_tlp_ui::onStepIndefinitelyPE2 = [this] { this->stepIndefinitelyPE2(); };
     cpu_tlp_ui::onStopPE2 = [this] { this->stopPE2(); };
 
-    // 10) Registrar callbacks PE3
+    // ============================================================
+    // 14) Registrar callbacks PE3
+    // ============================================================
     cpu_tlp_ui::onResetPE3 = [this] { this->resetPE3(); };
     cpu_tlp_ui::onStepPE3 = [this] { this->stepPE3(); };
     cpu_tlp_ui::onStepUntilPE3 = [this](int n) { this->stepUntilPE3(n); };
     cpu_tlp_ui::onStepIndefinitelyPE3 = [this] { this->stepIndefinitelyPE3(); };
     cpu_tlp_ui::onStopPE3 = [this] { this->stopPE3(); };
 
+    // ============================================================
+    // 15) Construir todas las vistas
+    // ============================================================
     buildAllViews();
 }
 
 CpuTLPSharedCacheState::~CpuTLPSharedCacheState() {
-    // Orden inverso
-    if (m_pe3) m_pe3->shutdown();
+    // ============================================================
+    // DESTRUCCIÓN EN ORDEN INVERSO A LA CONSTRUCCIÓN
+    // ============================================================
+
+    // ============================================================
+    // 1) Apagar PE3 (último en crearse, primero en destruirse)
+    // ============================================================
+    if (m_pe3) {
+        m_pe3->shutdown();
+    }
     m_pe3.reset();
 
-    if (m_pe2) m_pe2->shutdown();
+    // ============================================================
+    // 2) Apagar PE2
+    // ============================================================
+    if (m_pe2) {
+        m_pe2->shutdown();
+    }
     m_pe2.reset();
 
-    if (m_pe1) m_pe1->shutdown();
+    // ============================================================
+    // 3) Apagar PE1
+    // ============================================================
+    if (m_pe1) {
+        m_pe1->shutdown();
+    }
     m_pe1.reset();
 
-    if (m_pe0) m_pe0->shutdown();
+    // ============================================================
+    // 4) Apagar PE0
+    // ============================================================
+    if (m_pe0) {
+        m_pe0->shutdown();
+    }
     m_pe0.reset();
 
-    if (m_sharedMemoryComponent) m_sharedMemoryComponent->shutdown();
+    // ============================================================
+    // 5) Apagar L1 Cache 3
+    // ============================================================
+    if (m_l1c3) {
+        m_l1c3->shutdown();
+    }
+    m_l1c3.reset();
+
+    // ============================================================
+    // 6) Apagar L1 Cache 2
+    // ============================================================
+    if (m_l1c2) {
+        m_l1c2->shutdown();
+    }
+    m_l1c2.reset();
+
+    // ============================================================
+    // 7) Apagar L1 Cache 1
+    // ============================================================
+    if (m_l1c1) {
+        m_l1c1->shutdown();
+    }
+    m_l1c1.reset();
+
+    // ============================================================
+    // 8) Apagar L1 Cache 0
+    // ============================================================
+    if (m_l1c0) {
+        m_l1c0->shutdown();
+    }
+    m_l1c0.reset();
+
+    // ============================================================
+    // 9) Apagar Interconnect (después de las cachés)
+    // ============================================================
+    if (m_interconnect) {
+        m_interconnect->shutdown();
+    }
+    m_interconnect.reset();
+
+    // ============================================================
+    // 10) Apagar SharedMemory
+    // ============================================================
+    if (m_sharedMemoryComponent) {
+        m_sharedMemoryComponent->shutdown();
+    }
     m_sharedMemoryComponent.reset();
 
-    if (m_instructionMemory) m_instructionMemory->shutdown();
+    // ============================================================
+    // 11) Apagar InstructionMemory (primero en crearse, último en destruirse)
+    // ============================================================
+    if (m_instructionMemory) {
+        m_instructionMemory->shutdown();
+    }
     m_instructionMemory.reset();
 }
 
@@ -205,6 +321,107 @@ ICpuTLPView* CpuTLPSharedCacheState::getView(Panel p) {
 
 void CpuTLPSharedCacheState::handleEvent(sf::Event& e) {
     if (auto* v = getView(m_selected)) v->handleEvent(e);
+}
+
+std::string CpuTLPSharedCacheState::formatMesiState(uint8_t state) {
+    switch (state) {
+    case 0: return "I"; // Invalid
+    case 1: return "S"; // Shared
+    case 2: return "E"; // Exclusive
+    case 3: return "M"; // Modified
+    default: return "?";
+    }
+}
+
+// ===== MÉTODO NUEVO: Actualizar UNA SOLA vista de caché específica =====
+void CpuTLPSharedCacheState::updateSingleCacheView(int peId) {
+    if (peId < 0 || peId >= 4) return;
+
+    // Obtener el componente L1 correspondiente
+    cpu_tlp::L1Component* l1_component = nullptr;
+    ICpuTLPView* mem_view = nullptr;
+
+    switch (peId) {
+    case 0:
+        l1_component = m_l1c0.get();
+        mem_view = getView(Panel::PE0Mem);
+        break;
+    case 1:
+        l1_component = m_l1c1.get();
+        mem_view = getView(Panel::PE1Mem);
+        break;
+    case 2:
+        l1_component = m_l1c2.get();
+        mem_view = getView(Panel::PE2Mem);
+        break;
+    case 3:
+        l1_component = m_l1c3.get();
+        mem_view = getView(Panel::PE3Mem);
+        break;
+    }
+
+    if (!l1_component || !mem_view) return;
+
+    L1Cache* cache = l1_component->l1();
+    if (!cache) return;
+
+    // Iterar sobre cada set (0-7) y cada way (0-1)
+    for (int set = 0; set < 8; ++set) {
+        for (int way = 0; way < 2; ++way) {
+
+            // ===== ACCESO THREAD-SAFE: getLineInfo usa mutex internamente =====
+            CacheLineInfo lineInfo = cache->getLineInfo(set, way);
+
+            // Formatear TAG (siempre 14 dígitos hex para 56 bits)
+            std::ostringstream tag_oss;
+            tag_oss << "0x" << std::hex << std::uppercase
+                << std::setfill('0') << std::setw(14)
+                << lineInfo.tag;
+
+            // Formatear estado MESI
+            std::string mesi_str = formatMesiState(static_cast<uint8_t>(lineInfo.state));
+
+            // ===== ACTUALIZACIÓN INDEPENDIENTE POR VISTA =====
+            switch (peId) {
+            case 0: {
+                auto* view = dynamic_cast<PE0MemView*>(mem_view);
+                if (view) {
+                    view->setBySetWay(set, way, tag_oss.str(), lineInfo.data, mesi_str);
+                }
+                break;
+            }
+            case 1: {
+                auto* view = dynamic_cast<PE1MemView*>(mem_view);
+                if (view) {
+                    view->setBySetWay(set, way, tag_oss.str(), lineInfo.data, mesi_str);
+                }
+                break;
+            }
+            case 2: {
+                auto* view = dynamic_cast<PE2MemView*>(mem_view);
+                if (view) {
+                    view->setBySetWay(set, way, tag_oss.str(), lineInfo.data, mesi_str);
+                }
+                break;
+            }
+            case 3: {
+                auto* view = dynamic_cast<PE3MemView*>(mem_view);
+                if (view) {
+                    view->setBySetWay(set, way, tag_oss.str(), lineInfo.data, mesi_str);
+                }
+                break;
+            }
+            }
+        }
+    }
+}
+
+// ===== MÉTODO PRINCIPAL: Actualizar TODAS las vistas de caché =====
+void CpuTLPSharedCacheState::updateCacheViews() {
+    // Actualizar cada caché de forma independiente
+    for (int pe = 0; pe < 4; ++pe) {
+        updateSingleCacheView(pe);
+    }
 }
 
 void CpuTLPSharedCacheState::update(float dt) {
@@ -343,6 +560,14 @@ void CpuTLPSharedCacheState::update(float dt) {
             }
             m_swiSeenCount[pe] = cur;
         }
+    }
+
+    // ===== ACTUALIZACIÓN PERIÓDICA DE VISTAS DE CACHÉ =====
+    // Se actualiza cada 100ms para evitar sobrecarga
+    m_cacheUpdateTimer += dt;
+    if (m_cacheUpdateTimer >= CACHE_UPDATE_INTERVAL) {
+        updateCacheViews();  // Actualiza las 4 cachés independientemente
+        m_cacheUpdateTimer = 0.0f;
     }
 
     for (auto& v : m_views) {
@@ -530,6 +755,12 @@ void CpuTLPSharedCacheState::resetPE0() {
     else {
         std::cerr << "[CpuTLPSharedCacheState] PE0 is null!\n";
     }
+
+    // ===== RESETEAR LA CACHÉ L1 DE PE0 =====
+    if (m_l1c0 && m_l1c0->l1()) {
+        m_l1c0->l1()->reset();
+        std::cout << "[CpuTLPSharedCacheState] L1Cache0 reset\n";
+    }
 }
 
 void CpuTLPSharedCacheState::stepPE0() {
@@ -575,6 +806,12 @@ void CpuTLPSharedCacheState::resetPE1() {
     }
     else {
         std::cerr << "[CpuTLPSharedCacheState] PE1 is null!\n";
+    }
+
+    // ===== RESETEAR LA CACHÉ L1 DE PE1 =====
+    if (m_l1c1 && m_l1c1->l1()) {
+        m_l1c1->l1()->reset();
+        std::cout << "[CpuTLPSharedCacheState] L1Cache1 reset\n";
     }
 }
 
@@ -622,6 +859,12 @@ void CpuTLPSharedCacheState::resetPE2() {
     else {
         std::cerr << "[CpuTLPSharedCacheState] PE2 is null!\n";
     }
+
+    // ===== RESETEAR LA CACHÉ L1 DE PE2 =====
+    if (m_l1c2 && m_l1c2->l1()) {
+        m_l1c2->l1()->reset();
+        std::cout << "[CpuTLPSharedCacheState] L1Cache2 reset\n";
+    }
 }
 
 void CpuTLPSharedCacheState::stepPE2() {
@@ -667,6 +910,12 @@ void CpuTLPSharedCacheState::resetPE3() {
     }
     else {
         std::cerr << "[CpuTLPSharedCacheState] PE3 is null!\n";
+    }
+
+    // ===== RESETEAR LA CACHÉ L1 DE PE3 =====
+    if (m_l1c3 && m_l1c3->l1()) {
+        m_l1c3->l1()->reset();
+        std::cout << "[CpuTLPSharedCacheState] L1Cache3 reset\n";
     }
 }
 

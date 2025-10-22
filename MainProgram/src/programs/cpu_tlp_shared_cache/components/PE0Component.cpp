@@ -1,5 +1,4 @@
-﻿//PE0Component.c
-#include "programs/cpu_tlp_shared_cache/components/PE0Component.h"
+﻿#include "programs/cpu_tlp_shared_cache/components/PE0Component.h"
 #include "programs/cpu_tlp_shared_cache/widgets/InstructionDisassembler.h"
 #include "programs/cpu_tlp_shared_cache/widgets/Log.h"
 #include <chrono>
@@ -299,7 +298,7 @@ namespace cpu_tlp {
             res.value = 0;
             break;
         }
-        break;
+                 break;
         case 0x21: // CRASH
             res.value = 0;
             break;
@@ -368,7 +367,7 @@ namespace cpu_tlp {
             break;
         }
 
-            // 0x1E-0x27: Operaciones floating point SIN inmediato
+                 // 0x1E-0x27: Operaciones floating point SIN inmediato
         case 0x1E: // FADD Rd, Rn, Rm
             sig.RegWrite_D = 1; sig.MemOp_D = 0; sig.C_WE_D = 0;
             sig.C_REQUEST_D = 0; sig.C_ISB_D = 0; sig.PCSrc_D = 0;
@@ -586,7 +585,7 @@ namespace cpu_tlp {
             break;
         }
 
-            // 0x45-0x4B: Branches
+                 // 0x45-0x4B: Branches
         case 0x45: case 0x46: case 0x47: case 0x48:
         case 0x49: case 0x4A: case 0x4B:
             sig.RegWrite_D = 0; sig.MemOp_D = 0; sig.C_WE_D = 0;
@@ -858,7 +857,7 @@ namespace cpu_tlp {
     }
 
     bool PE0Component::initialize(std::shared_ptr<CPUSystemSharedData> sharedData) {
-       
+
         if (m_isRunning.load()) {
             return false;
         }
@@ -874,7 +873,7 @@ namespace cpu_tlp {
             if (addr < 12) {
                 m_sharedData->pe_registers[m_pe_id].registers[addr].store(value, std::memory_order_release);
             }
-        };
+            };
 
         // ← AGREGAR: Sincronización inicial del snapshot completo
         for (int i = 0; i < 12; ++i) {

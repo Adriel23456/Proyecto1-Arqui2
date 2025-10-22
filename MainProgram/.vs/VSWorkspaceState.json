@@ -9,19 +9,7 @@
   },
   "ExpandedNodes": [
     "",
-    "\\include",
-    "\\include\\programs",
-    "\\include\\programs\\cpu_tlp_shared_cache",
-    "\\include\\programs\\cpu_tlp_shared_cache\\components",
-    "\\include\\programs\\cpu_tlp_shared_cache\\components\\cash",
-    "\\resources",
-    "\\src",
-    "\\src\\programs",
-    "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components\\bus",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components\\cash"
+    "\\out\\build"
   ],
-  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\components\\PE3Component.cpp",
   "PreviewInSolutionExplorer": false
 }

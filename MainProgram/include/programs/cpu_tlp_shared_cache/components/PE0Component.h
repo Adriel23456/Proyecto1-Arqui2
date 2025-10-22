@@ -1,5 +1,4 @@
-﻿//PE0Component.h
-#pragma once
+﻿#pragma once
 #include "programs/cpu_tlp_shared_cache/components/SharedData.h"
 #include <thread>
 #include <memory>

@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 #include <deque>
+#include <cstdint>
 
 class ICpuTLPView;
 
@@ -96,7 +97,6 @@ private:
     std::unique_ptr<cpu_tlp::InterconnectComponent> m_interconnect;
     std::unique_ptr<cpu_tlp::L1Component> m_l1c0, m_l1c1, m_l1c2, m_l1c3;
 
-
     friend class PE0RegView;
     friend class PE1RegView;
     friend class PE2RegView;
@@ -109,4 +109,12 @@ private:
     static std::string makeSwiPopupId(int pe) {
         return "SWI##PE" + std::to_string(pe);
     }
+
+    // ===== MÉTODOS PARA VISUALIZACIÓN DE CACHÉ (INDEPENDIENTES) =====
+    void updateCacheViews();
+    void updateSingleCacheView(int peId);  // NUEVO: Actualizar solo una caché específica
+    std::string formatMesiState(uint8_t state);
+
+    float m_cacheUpdateTimer = 0.0f;
+    static constexpr float CACHE_UPDATE_INTERVAL = 0.1f;  // 100ms entre actualizaciones
 };

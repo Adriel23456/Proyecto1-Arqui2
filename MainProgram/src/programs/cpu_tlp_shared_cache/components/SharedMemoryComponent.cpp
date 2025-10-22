@@ -5,8 +5,6 @@
 #include <chrono>
 #include <thread>
 
-
-
 namespace cpu_tlp {
 
     SharedMemoryComponent::SharedMemoryComponent()

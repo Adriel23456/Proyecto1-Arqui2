@@ -1,24 +1,28 @@
-//L1_Component.cpp
-#include "../include/programs/cpu_tlp_shared_cache/components/cash/L1Component.h"
-
+#include "programs/cpu_tlp_shared_cache/components/cash/L1Component.h"
 #include <chrono>
+#include <iostream>
 
 namespace cpu_tlp {
 
-    bool L1Component::initialize(std::shared_ptr<CPUSystemSharedData> sharedData,
-        Interconnect* ic)
-
-    {
-
-        if (m_running.load()) return false;
-        if (!sharedData || !ic) return false;
+    bool L1Component::initialize(std::shared_ptr<CPUSystemSharedData> sharedData, Interconnect* ic) {
+        if (m_running.load()) {
+            std::cerr << "[L1Cache" << m_id << "] Already running, cannot initialize again\n";
+            return false;
+        }
+        if (!sharedData || !ic) {
+            std::cerr << "[L1Cache" << m_id << "] Invalid parameters (sharedData or interconnect is null)\n";
+            return false;
+        }
 
         m_shared = std::move(sharedData);
 
         // 1) Conectar puertos del bus
         m_portOut = ic->portM2B(m_id);
         m_portIn = ic->portB2M(m_id);
-        if (!m_portOut || !m_portIn) return false;
+        if (!m_portOut || !m_portIn) {
+            std::cerr << "[L1Cache" << m_id << "] Failed to get bus ports\n";
+            return false;
+        }
 
         // 2) Adjuntar a la L1 y registrar snoop
         m_l1.attachBus(m_portOut, m_portIn, m_id);
@@ -32,13 +36,28 @@ namespace cpu_tlp {
         // 4) Lanzar hilo
         m_running.store(true, std::memory_order_release);
         m_thr = std::make_unique<std::thread>(&L1Component::threadMain, this);
+
+        // ===== LOG DE INICIALIZACIÓN =====
+        std::cout << "[L1Cache" << m_id << "] Initialized successfully\n";
+
         return true;
     }
 
     void L1Component::shutdown() {
-        if (!m_running.exchange(false)) return;
-        if (m_thr && m_thr->joinable()) m_thr->join();
+        if (!m_running.exchange(false)) {
+            return; // Ya estaba apagado
+        }
+
+        // ===== LOG DE INICIO DE SHUTDOWN =====
+        std::cout << "[L1Cache" << m_id << "] Shutting down...\n";
+
+        if (m_thr && m_thr->joinable()) {
+            m_thr->join();
+        }
         m_thr.reset();
+
+        // ===== LOG DE SHUTDOWN COMPLETO =====
+        std::cout << "[L1Cache" << m_id << "] Shutdown complete\n";
     }
 
     CpuReq L1Component::readCpuReq() {
@@ -64,6 +83,7 @@ namespace cpu_tlp {
 
     void L1Component::threadMain() {
         using namespace std::chrono_literals;
+
         while (m_running.load(std::memory_order_acquire) &&
             !m_shared->system_should_stop.load(std::memory_order_acquire))
         {
