@@ -1,12 +1,105 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 1,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedHeight": 312,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "l1_snoop.cpp",
+              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp",
+              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp",
+              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp",
+              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp",
+              "ViewState": "AgIAAGsAAAAAAAAAAAAcwH8AAAAZAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-10-22T23:54:07.039Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "l1_cash.h",
+              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h",
+              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h",
+              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h",
+              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_cash.h",
+              "ViewState": "AgIAAKQAAAAAAAAAAAAcwLMAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-10-22T23:53:36.993Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "interconnect_bus.cpp",
+              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
+              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
+              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
+              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
+              "ViewState": "AgIAAJQBAAAAAAAAAAAcwKQBAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-10-22T23:52:58.42Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "interconnect_bus.h",
+              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
+              "RelativeDocumentMoniker": "include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
+              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
+              "RelativeToolTip": "include\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.h",
+              "ViewState": "AgIAAF4AAAAAAAAAAAAcwGsAAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-10-22T23:52:46.038Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "l1_fsm.cpp",
+              "DocumentMoniker": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp",
+              "RelativeDocumentMoniker": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp",
+              "ToolTip": "D:\\Escritorio\\Informacion-de-Prioridad\\TEC\\2025\\Semestre2\\Arqui2\\Evaluaciones\\Proyecto1\\Proyecto1-Arqui2\\MainProgram\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp",
+              "RelativeToolTip": "src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_fsm.cpp",
+              "ViewState": "AgIAAEEBAAAAAAAAAAAcwFoBAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-10-22T23:37:55.286Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }

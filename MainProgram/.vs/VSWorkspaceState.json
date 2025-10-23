@@ -13,13 +13,12 @@
     "\\include\\programs",
     "\\include\\programs\\cpu_tlp_shared_cache",
     "\\include\\programs\\cpu_tlp_shared_cache\\components",
-    "\\include\\programs\\cpu_tlp_shared_cache\\components\\cash",
     "\\src",
     "\\src\\programs",
     "\\src\\programs\\cpu_tlp_shared_cache",
     "\\src\\programs\\cpu_tlp_shared_cache\\components",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components\\cash"
+    "\\src\\programs\\cpu_tlp_shared_cache\\components\\bus"
   ],
-  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\components\\cash\\l1_snoop.cpp",
+  "SelectedNode": "\\src\\programs\\cpu_tlp_shared_cache\\components\\bus\\interconnect_bus.cpp",
   "PreviewInSolutionExplorer": false
 }

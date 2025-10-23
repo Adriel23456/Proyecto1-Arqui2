@@ -4,9 +4,8 @@
 ; Resultado esperado: Memoria[16] = 16.0
 ; =======================================================
 FMOVI REG1, #16.0          ; REG1 = 16.0
-MOVI REG2, #16             ; REG2 = 16 (direccin base)
+MOVI REG2, #16             ; REG2 = 16 (dirección base)
 STR REG1, [REG2]           ; Memoria[16] = REG1 = 16.0
-NOP
 STR REG2, [REG2]           ; Memoria[16] = REG2 = 16
 NOP
 NOP
