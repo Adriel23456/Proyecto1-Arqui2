@@ -9,12 +9,8 @@
   },
   "ExpandedNodes": [
     "",
-    "\\src\\programs",
-    "\\src\\programs\\cpu_tlp_shared_cache",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components",
-    "\\src\\programs\\cpu_tlp_shared_cache\\components\\bus",
-    "\\src\\programs\\cpu_tlp_shared_cache\\views"
+    "\\src\\programs\\cpu_tlp_shared_cache\\components"
   ],
-  "SelectedNode": "\\include",
+  "SelectedNode": "\\src",
   "PreviewInSolutionExplorer": false
 }

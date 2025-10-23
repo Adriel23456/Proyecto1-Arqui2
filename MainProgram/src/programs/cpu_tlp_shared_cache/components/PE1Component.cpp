@@ -1077,7 +1077,7 @@ namespace cpu_tlp {
             switch (cmd) {
             case 0: // idle
                 ctrl.running.store(false, std::memory_order_release);
-                std::this_thread::sleep_for(1ms);
+                std::this_thread::sleep_for(3ms);
                 break;
 
             case 1: // step
@@ -1111,7 +1111,7 @@ namespace cpu_tlp {
                     break;
                 }
                 executeCycle();
-                std::this_thread::sleep_for(1us);
+                std::this_thread::sleep_for(250us);
                 break;
             } // AGREGADO: cierre de llaves
 
@@ -1215,7 +1215,7 @@ namespace cpu_tlp {
         instConn.PC_F.store(PC_F, std::memory_order_release);
 
 
-        std::this_thread::sleep_for(std::chrono::microseconds(500));
+        std::this_thread::sleep_for(std::chrono::microseconds(850));
     }
 
     // ============================================================================
