@@ -5,6 +5,23 @@
 
 namespace cpu_tlp {
 
+    // =======================
+    // ANALYSIS COUNTERS (NEW)
+    // =======================
+    struct AnalysisCounters {
+        std::atomic<uint64_t> traffic_pe[4];
+        std::atomic<uint64_t> cache_misses{ 0 };
+        std::atomic<uint64_t> invalidations{ 0 };
+        std::atomic<uint64_t> transactions_mesi{ 0 };
+
+        void reset() {
+            for (auto& a : traffic_pe) a.store(0, std::memory_order_relaxed);
+            cache_misses.store(0, std::memory_order_relaxed);
+            invalidations.store(0, std::memory_order_relaxed);
+            transactions_mesi.store(0, std::memory_order_relaxed);
+        }
+    };
+
     // ============================================================================
     // INSTRUCTION MEMORY CONNECTION (existente)
     // ============================================================================
@@ -97,6 +114,9 @@ namespace cpu_tlp {
         PERegistersSnapshot pe_registers[4];
         PEInstructionTracking pe_instruction_tracking[4];
         UISignals ui_signals[4];
+
+        // ===== Analysis =====
+        AnalysisCounters analysis;
     };
 
 } // namespace cpu_tlp

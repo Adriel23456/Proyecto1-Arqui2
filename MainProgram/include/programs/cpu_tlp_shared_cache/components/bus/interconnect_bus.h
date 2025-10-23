@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <atomic>
 #include <mutex>
-
+#include "programs/cpu_tlp_shared_cache/components/SharedData.h" // para CPUSystemSharedData
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_cash.h"   // BusCmd, LineData, OFFSET_BITS
 #include "programs/cpu_tlp_shared_cache/components/cash/l1_snoop.h"  // SnoopReq, SnoopResp
 
@@ -59,6 +59,7 @@ public:
 
     // Enlazar backend de DRAM (canal atómico del SharedMemoryComponent)
     void bindRAM(cpu_tlp::RAMConnection* ram) { ram_ = ram; }
+    void bindShared(cpu_tlp::CPUSystemSharedData* s) { shared_ = s; }
 
     // Avanza un ciclo de bus
     void tick();
@@ -106,6 +107,7 @@ private:
 
     // Backend DRAM (atomics del SharedMemory)
     cpu_tlp::RAMConnection* ram_{ nullptr };
+    cpu_tlp::CPUSystemSharedData* shared_{ nullptr };
 
     // Ignorar B_REQ de un master hasta que baje (edge-trigger)
     std::vector<bool> req_edge_block_;

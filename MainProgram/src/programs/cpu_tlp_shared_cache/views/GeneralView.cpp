@@ -57,6 +57,8 @@ void GeneralView::render() {
         if (cpu_tlp_ui::onResetPE1) cpu_tlp_ui::onResetPE1();
         if (cpu_tlp_ui::onResetPE2) cpu_tlp_ui::onResetPE2();
         if (cpu_tlp_ui::onResetPE3) cpu_tlp_ui::onResetPE3();
+        // Resetear tambien los datos de analisis
+        if (cpu_tlp_ui::onResetAnalysis) cpu_tlp_ui::onResetAnalysis();
     }
     ImGui::PopStyleColor(3);
     ImGui::SameLine(0.0f, GAP);

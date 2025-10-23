@@ -309,6 +309,17 @@ void Interconnect::tick() {
 
         b2m_[owner].B_GRANT.store(true, std::memory_order_release);
 
+        // ====== MÉTRICAS (ADDED): miss y transición del solicitante ======
+        if (shared_) {
+            if (tx_.cmd == BusCmd::BusRd || tx_.cmd == BusCmd::BusRdX) {
+                shared_->analysis.cache_misses.fetch_add(1, std::memory_order_relaxed);
+                shared_->analysis.transactions_mesi.fetch_add(1, std::memory_order_relaxed); // I->E/S o I->M
+            }
+            else if (tx_.cmd == BusCmd::BusUpgr) {
+                shared_->analysis.transactions_mesi.fetch_add(1, std::memory_order_relaxed); // S->M
+            }
+        }
+
         // Difusión Snoop
         for (int id = 0; id < (int)m2b_.size(); ++id) {
             if (id == owner) continue;
@@ -339,6 +350,12 @@ void Interconnect::tick() {
                 if (tx_.m_owner < 0) tx_.m_owner = id;
             }
 
+            // ====== MÉTRICAS (ADDED): invalidaciones por BusRdX ======
+            if (tx_.cmd == BusCmd::BusRdX && r.inv_ack && shared_) {
+                shared_->analysis.invalidations.fetch_add(1, std::memory_order_relaxed);
+                shared_->analysis.transactions_mesi.fetch_add(1, std::memory_order_relaxed); // S/E->I o M->I
+            }
+
             if (tx_.cmd == BusCmd::BusUpgr) {
                 if (r.has_shared && !r.has_mod) tx_.inv_acks_needed++;
                 if (r.inv_ack)                  tx_.inv_acks_got++;
@@ -353,6 +370,12 @@ void Interconnect::tick() {
 
         b2m_[owner].B_SHARED_SEEN.store(tx_.seen_shared, std::memory_order_relaxed);
         b2m_[owner].B_HITM_SEEN.store(tx_.seen_hitm, std::memory_order_relaxed);
+
+        // ====== MÉTRICAS (ADDED): invalidaciones por BusUpgr (en total) ======
+        if (shared_ && tx_.cmd == BusCmd::BusUpgr && tx_.inv_acks_got > 0) {
+            shared_->analysis.invalidations.fetch_add(tx_.inv_acks_got, std::memory_order_relaxed);
+            shared_->analysis.transactions_mesi.fetch_add(tx_.inv_acks_got, std::memory_order_relaxed);
+        }
 
         // Ejecución según comando
         switch (tx_.cmd) {
@@ -391,6 +414,12 @@ void Interconnect::tick() {
                         if (!tx_.signaled_done) {
                             b2m_[owner].B_DONE.store(true, std::memory_order_release);
                             tx_.signaled_done = true;
+                        }
+
+                        // ====== MÉTRICAS (ADDED): downgrade del dueño M ======
+                        if (shared_) {
+                            // M->S en BusRd, M->I en BusRdX
+                            shared_->analysis.transactions_mesi.fetch_add(1, std::memory_order_relaxed);
                         }
                     }
                 }

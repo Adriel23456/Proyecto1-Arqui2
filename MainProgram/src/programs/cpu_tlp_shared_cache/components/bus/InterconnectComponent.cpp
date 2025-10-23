@@ -22,6 +22,7 @@ namespace cpu_tlp {
 
         // Construir el bus con N masters
         m_bus = std::make_unique<Interconnect>(masters);
+        m_bus->bindShared(m_shared.get());
 
         // Conectar RAM (RAMConnection del SharedMemoryComponent)
         m_bus->bindRAM(&m_shared->ram_connection);

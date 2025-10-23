@@ -29,4 +29,7 @@ namespace cpu_tlp_ui {
     inline std::function<void(int)>     onStepUntilPE3;
     inline std::function<void()>        onStepIndefinitelyPE3;
     inline std::function<void()>        onStopPE3;
+
+    // NUEVO: Reset de datos de análisis globales (tráfico, etc.)
+    inline std::function<void()> onResetAnalysis;
 }

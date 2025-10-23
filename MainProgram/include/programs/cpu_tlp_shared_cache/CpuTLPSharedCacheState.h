@@ -56,6 +56,9 @@ public:
     void stepIndefinitelyPE3();
     void stopPE3();
 
+    // Reset de datos de análisis (se invoca desde el botón RESET global)
+    void resetAnalysis();
+
 private:
     enum class Panel {
         Compiler = 0,

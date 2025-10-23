@@ -42,6 +42,7 @@ CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindo
     // 1) Construir UNA SOLA estructura de datos compartidos
     // ============================================================
     m_cpuSystemData = std::make_shared<cpu_tlp::CPUSystemSharedData>();
+    m_cpuSystemData->analysis.reset(); // <-- ADDED
 
     // ============================================================
     // 2) Lanzar InstructionMemory
@@ -165,6 +166,9 @@ CpuTLPSharedCacheState::CpuTLPSharedCacheState(StateManager* sm, sf::RenderWindo
     cpu_tlp_ui::onStepUntilPE3 = [this](int n) { this->stepUntilPE3(n); };
     cpu_tlp_ui::onStepIndefinitelyPE3 = [this] { this->stepIndefinitelyPE3(); };
     cpu_tlp_ui::onStopPE3 = [this] { this->stopPE3(); };
+
+    // 14.5) Registrar callback de análisis
+    cpu_tlp_ui::onResetAnalysis = [this] { this->resetAnalysis(); };
 
     // ============================================================
     // 15) Construir todas las vistas
@@ -570,6 +574,26 @@ void CpuTLPSharedCacheState::update(float dt) {
         m_cacheUpdateTimer = 0.0f;
     }
 
+    // === Analysis Data (ADDED) ===
+    if (auto* adv = dynamic_cast<AnalysisDataView*>(getView(Panel::AnalysisData))) {
+        auto& an = m_cpuSystemData->analysis;
+
+        const uint64_t t0 = an.traffic_pe[0].load(std::memory_order_acquire);
+        const uint64_t t1 = an.traffic_pe[1].load(std::memory_order_acquire);
+        const uint64_t t2 = an.traffic_pe[2].load(std::memory_order_acquire);
+        const uint64_t t3 = an.traffic_pe[3].load(std::memory_order_acquire);
+
+        adv->setTrafficPE0(t0);
+        adv->setTrafficPE1(t1);
+        adv->setTrafficPE2(t2);
+        adv->setTrafficPE3(t3);
+        adv->setReadWriteOps(t0 + t1 + t2 + t3);
+
+        adv->setCacheMisses(an.cache_misses.load(std::memory_order_acquire));
+        adv->setInvalidations(an.invalidations.load(std::memory_order_acquire));
+        adv->setTransactionsMESI(an.transactions_mesi.load(std::memory_order_acquire));
+    }
+
     for (auto& v : m_views) {
         if (v) v->update(dt);
     }
@@ -952,5 +976,24 @@ void CpuTLPSharedCacheState::stopPE3() {
     }
     else {
         std::cerr << "[CpuTLPSharedCacheState] PE3 is null!\n";
+    }
+}
+
+void CpuTLPSharedCacheState::resetAnalysis() {
+    if (!m_cpuSystemData) return;
+
+    // Limpia todos los contadores/estadísticas atómicas de análisis
+    m_cpuSystemData->analysis.reset();
+
+    // (Opcional) refresca al instante la vista si quieres verla en cero sin esperar al próximo update()
+    if (auto* adv = dynamic_cast<AnalysisDataView*>(getView(Panel::AnalysisData))) {
+        adv->setTrafficPE0(0);
+        adv->setTrafficPE1(0);
+        adv->setTrafficPE2(0);
+        adv->setTrafficPE3(0);
+        adv->setReadWriteOps(0);
+        adv->setCacheMisses(0);
+        adv->setInvalidations(0);
+        adv->setTransactionsMESI(0);
     }
 }

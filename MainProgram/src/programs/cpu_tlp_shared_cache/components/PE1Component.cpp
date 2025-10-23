@@ -987,6 +987,9 @@ namespace cpu_tlp {
 
         // ← AGREGAR ESTA LÍNEA CRÍTICA
         m_hazardUnit.reset();
+        // reset del contador de tráfico por operación
+        m_memReqCounted = false;
+        m_prevAck = false;
 
         // Reset tracking de instrucciones (local)
         m_stageInstructions.fill(NOP_INSTRUCTION);
@@ -1151,10 +1154,25 @@ namespace cpu_tlp {
         auto& cacheConn = m_sharedData->cache_connections[m_pe_id];
         cacheConn.C_READY_ACK.store(m_hazards.C_READY_ACK, std::memory_order_release);
 
+        // ===== CONTADOR DE TRÁFICO (ADDED) =====
+        // Cuenta una sola vez por operación de memoria cuando la instrucción
+        // está en EX/MEM solicitando a caché (EX_MEM.C_REQUEST_E == 1).
+        // Se reinicia cuando termina el handshake (baja de C_READY_ACK).
+        if (EX_MEM.C_REQUEST_E && !m_memReqCounted) {
+            countRw_();               // +1 operación (LDR/STR/ISB)
+            m_memReqCounted = true;   // evita dobles conteos mientras dure el stall/handshake
+        }
+        // Handshake completo: C_READY_ACK pasó de 1->0 => liberar el flag
+        if (m_prevAck && !m_hazards.C_READY_ACK) {
+            m_memReqCounted = false;
+        }
+        m_prevAck = m_hazards.C_READY_ACK;
+
         // Actualizar flipflops
         if (!m_hazards.StallW) {
             MEM_WB = MEM_WB_next;
         }
+
         if (!m_hazards.StallM) {
             EX_MEM = EX_MEM_next;
         }

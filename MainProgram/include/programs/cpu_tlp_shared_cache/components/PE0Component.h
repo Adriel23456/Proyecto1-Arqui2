@@ -28,6 +28,12 @@ namespace cpu_tlp {
         bool isRunning() const;
 
     private:
+        inline void countRw_() {
+            if (m_sharedData) {
+                m_sharedData->analysis.traffic_pe[m_pe_id].fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+
         void threadMain();
         void executeCycle();
 
@@ -223,6 +229,9 @@ namespace cpu_tlp {
         // Estado interno
         std::atomic<bool> m_isRunning;
         bool m_segmentationFault;
+        // --- Contador de tráfico: control de "una vez por operación" ---
+        bool m_memReqCounted{ false }; // true = ya conté la op de memoria en curso (EX/MEM)
+        bool m_prevAck{ false };       // para detectar fin del handshake (bajada de C_READY_ACK)
 
         // Constantes
         static constexpr uint64_t NOP_INSTRUCTION = 0x4D00000000000000ULL;
